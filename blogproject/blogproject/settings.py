@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-$9*$^&%**9je*ecm_0j*n_s=!9&k^_^627*dr#@%p(0+p&9@(_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 CORS_ALLOW_ALL_ORIGINS = True
-ALLOWED_HOSTS = ['192.168.1.2']
+ALLOWED_HOSTS = ['websiteBackend.pythonanywhere.com']
 
 
 # Application definition
@@ -125,6 +125,12 @@ STATIC_URL = "static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+
+CORS_ALLOWED_ORIGINS = [
+    "https://slmfront.vercel.app/"
+ ]
+
+CORS_ALLOW_ALL_ORIGIN = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
