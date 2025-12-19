@@ -131,3 +131,23 @@ def contact_list(request):
 def blog_list(request):
     blogs = Blog.objects.all().order_by("-publish_date")
     return render(request, "blog_list.html", {"blogs": blogs})
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import WebinarRegistrationSerializer
+
+class WebinarRegistrationAPIView(APIView):
+    def post(self, request):
+        serializer = WebinarRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {
+                    "message": "Registration successful",
+                    "redirect_url": "https://technovizautomation.com"
+                },
+                status=status.HTTP_201_CREATED
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -9,6 +9,6 @@ router.register(r'contacts', ContactViewSet, basename='contact')
 urlpatterns = [
     path('', include(router.urls)),
     path("con/create/", ContactCreateView.as_view(), name="contact_create"),
- 
+    path("webinar/register/", WebinarRegistrationAPIView.as_view(), name="webinar-register"),
     
 ]
