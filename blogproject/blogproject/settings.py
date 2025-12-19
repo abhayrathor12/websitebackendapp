@@ -129,6 +129,7 @@ STATIC_URL = "static/"
 CORS_ALLOWED_ORIGINS = [
     "https://technovizautomation.com",
     "https://www.technovizautomation.com",
+    "http://192.168.1.60:5173",
 ]
 
 

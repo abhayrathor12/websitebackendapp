@@ -181,7 +181,7 @@ class WebinarRegistrationAPIView(APIView):
                         f"Registered at: {registration.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
                     ),
                     from_email=None,
-                    recipient_list=["rathorabhay633@gmail.com"],
+                    recipient_list=["kkhurana@technovizautomation.com"],
                     fail_silently=False,
                 )
 
