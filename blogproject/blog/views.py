@@ -138,13 +138,58 @@ from rest_framework import status
 from .models import WebinarRegistration
 from .serializers import WebinarRegistrationSerializer
 
-
 class WebinarRegistrationAPIView(APIView):
 
     def post(self, request):
         serializer = WebinarRegistrationSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            registration = serializer.save()
+
+            print("📩 Preparing to send webinar emails to:", registration.email)
+
+            try:
+                # ✅ Mail to user
+                send_mail(
+                    subject="🎉 Webinar Registration Successful | Technoviz Automation",
+                    message=(
+                        f"Hello {registration.first_name},\n\n"
+                        "Thank you for registering for our webinar!\n\n"
+                        "We have successfully received your registration. "
+                        "Our team will share the webinar link and updates with you soon.\n\n"
+                        "📞 Contact Us:\n"
+                        "+91-9999765380 / 0124-4424695\n"
+                        "📧 Email: support@technovizautomation.com\n"
+                        "🌐 Website: https://technovizautomation.com\n\n"
+                        "If you have any questions, feel free to reach out to us.\n\n"
+                        "Best regards,\n"
+                        "Technoviz Automation"
+                    ),
+                    from_email=None,  # uses DEFAULT_FROM_EMAIL
+                    recipient_list=[registration.email],
+                    fail_silently=False,
+                )
+
+                # ✅ Mail to admin
+                send_mail(
+                    subject=f"📩 New Webinar Registration: {registration.first_name}",
+                    message=(
+                        "A new webinar registration has been received.\n\n"
+                        f"Name: {registration.first_name} {registration.last_name}\n"
+                        f"Company: {registration.company_name}\n"
+                        f"Email: {registration.email}\n"
+                        f"Phone: {registration.phone}\n\n"
+                        f"Registered at: {registration.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+                    ),
+                    from_email=None,
+                    recipient_list=["kkhurana@technovizautomation.com"],
+                    fail_silently=False,
+                )
+
+            except BadHeaderError:
+                print("❌ Bad header found while sending webinar email")
+            except Exception as e:
+                print("❌ Error sending webinar email:", str(e))
+
             return Response(
                 {
                     "message": "Registration successful",
@@ -152,7 +197,9 @@ class WebinarRegistrationAPIView(APIView):
                 },
                 status=status.HTTP_201_CREATED
             )
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
     def get(self, request):
         registrations = WebinarRegistration.objects.all().order_by("-created_at")
