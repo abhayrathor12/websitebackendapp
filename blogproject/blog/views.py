@@ -208,4 +208,4 @@ class WebinarRegistrationAPIView(APIView):
 
 def webinar_list(request):
     Webinar = WebinarRegistration.objects.all().order_by("-id")  # latest first
-    return render(request, "Webinar_contact.html", {"registrations": Webinar})
+    return render(request, "webinar_contact.html", {"registrations": Webinar})
