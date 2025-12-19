@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/', include('blog.urls')),
     path('blogpage/', add_blog, name='add_blog'),
     path("", contact_list, name="contact_list"),
+    path("webinar_list/", webinar_list, name="webinar_list"),
     path("blogsview/", blog_list, name="blog_list"),
     path("blog/edit/<int:blog_id>/", edit_blog, name="edit_blog"),
     

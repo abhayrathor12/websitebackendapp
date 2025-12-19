@@ -107,13 +107,13 @@
         .main-content {
             margin-left: 250px;
             margin-top: 60px;
-            padding: 2rem;
+            padding: 0.5rem;
             min-height: calc(100vh - 60px);
         }
 
         .content-wrapper {
             background-color: white;
-            padding: 2rem;
+            padding: 0.5rem;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
@@ -171,6 +171,15 @@
                         <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
                     </svg>
                     View Contacts
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'webinar_list' %}" 
+                class="{% if request.resolver_match.url_name == 'webinar_list' %}active{% endif %}">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                    </svg>
+                    Webite Contacts
                 </a>
             </li>
 

@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.core.mail import send_mail,BadHeaderError
 from rest_framework import viewsets
-from .models import Blog,Contact
+from .models import Blog,Contact,WebinarRegistration
 from .serializers import BlogSerializer,ContactSerializer
 from django.shortcuts import render, redirect
 from rest_framework.views import APIView
@@ -135,9 +135,12 @@ def blog_list(request):
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from .models import WebinarRegistration
 from .serializers import WebinarRegistrationSerializer
 
+
 class WebinarRegistrationAPIView(APIView):
+
     def post(self, request):
         serializer = WebinarRegistrationSerializer(data=request.data)
         if serializer.is_valid():
@@ -149,5 +152,13 @@ class WebinarRegistrationAPIView(APIView):
                 },
                 status=status.HTTP_201_CREATED
             )
-
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+        registrations = WebinarRegistration.objects.all().order_by("-created_at")
+        serializer = WebinarRegistrationSerializer(registrations, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+def webinar_list(request):
+    Webinar = WebinarRegistration.objects.all().order_by("-id")  # latest first
+    return render(request, "Webinar_contact.html", {"registrations": Webinar})
