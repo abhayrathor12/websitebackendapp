@@ -15,6 +15,7 @@ from django.shortcuts import get_object_or_404
 class BlogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Blog.objects.all().order_by('-publish_date')
     serializer_class = BlogSerializer
+    lookup_field = 'slug'
 
 class ContactCreateView(APIView):
     def post(self, request):
@@ -96,7 +97,7 @@ def add_blog(request):
             featured_image=featured_image
         )
 
-        return redirect("add_blog")  
+        return redirect("/blogpage/?success=1") 
 
     return render(request, "blog.html")
 

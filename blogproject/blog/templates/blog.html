@@ -279,6 +279,22 @@
         
         <!-- Form Container -->
         <div class="form-container">
+            <!-- Success Popup -->
+<div id="successPopup" style="
+display:none;
+position: fixed;
+top: 20px;
+right: 20px;
+background: #10b981;
+color: white;
+padding: 14px 20px;
+border-radius: 12px;
+box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+font-weight: 600;
+z-index: 9999;
+">
+✅ Blog published successfully!
+</div>
             <form method="post" enctype="multipart/form-data" id="blogForm">
                 {% csrf_token %}
                 
@@ -486,6 +502,23 @@
         uploadZone.classList.remove('dragover');
         handleFiles(e.dataTransfer.files);
     });
+    
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "1") {
+        const popup = document.getElementById("successPopup");
+        popup.style.display = "block";
+
+        // Auto hide after 3 seconds
+        setTimeout(() => {
+            popup.style.opacity = "0";
+            setTimeout(() => popup.remove(), 500);
+        }, 3000);
+
+        // Clean URL (remove ?success=1)
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     
     function handleFiles(files) {
         if (files.length > 0) {
