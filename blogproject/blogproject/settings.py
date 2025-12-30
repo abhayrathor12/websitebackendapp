@@ -146,3 +146,19 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_ALL_ORIGIN = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com" 
+EMAIL_PORT = 587 
+EMAIL_USE_TLS = True 
+EMAIL_HOST_USER = "workspace00018@gmail.com" 
+EMAIL_HOST_PASSWORD = "hgqu porv wvka lgnq" 
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend" 
+# # EMAIL_HOST = "smtp.pythonanywhere.com" 
+# # EMAIL_PORT = 587 
+# # EMAIL_USE_TLS = True 
+# # EMAIL_HOST_USER = "websiteBackend" 
+# # EMAIL_HOST_PASSWORD = "lpkoji098" 
+# # DEFAULT_FROM_EMAIL = "Technoviz Automation <websiteBackend@pythonanywhere.com>"

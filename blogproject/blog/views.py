@@ -147,56 +147,46 @@ from sib_api_v3_sdk.api.transactional_emails_api import TransactionalEmailsApi
 from sib_api_v3_sdk.models import SendSmtpEmail
 import os
 
-
 def send_webinar_emails(registration):
     try:
-        config = Configuration()
-        config.api_key["api-key"] = os.getenv("BREVO_API_KEY")
-        
-        api_client = ApiClient(config)
-        api = TransactionalEmailsApi(api_client)
         # ✅ Email to User
-        user_email = SendSmtpEmail(
-            sender={
-                "email": "workspace00018@gmail.com",
-                "name": "Technoviz Automation"
-            },
-            to=[{"email": registration.email}],
+        send_mail(
             subject="🎉 Webinar Registration Successful | Technoviz Automation",
-            html_content=f"""
-            <p>Hello {registration.first_name},</p>
-            <p>Thank you for registering for our webinar.</p>
-            <p>We have successfully received your registration.</p>
-            <p>Our team will share the webinar link with you soon.</p>
-            <br>
-            <p>
-            📞 +91-9999765380 / 0124-4424695<br>
-            🌐 <a href="https://technovizautomation.com">technovizautomation.com</a>
-            </p>
-            <br>
-            <p><b>Technoviz Automation</b></p>
-            """
+            message=(
+                f"Hello {registration.first_name},\n\n"
+                "Thank you for registering for our webinar!\n\n"
+                "We have successfully received your registration. "
+                "Our team will share the webinar link with you soon.\n\n"
+                "📞 +91-9999765380 / 0124-4424695\n"
+                "📧 support@technovizautomation.com\n"
+                "🌐 https://technovizautomation.com\n\n"
+                "Best regards,\n"
+                "Technoviz Automation"
+            ),
+            from_email=None,
+            recipient_list=[registration.email],
+            fail_silently=False,
         )
-        api.send_transac_email(user_email)
+
         # ✅ Email to Admin
-        admin_email = SendSmtpEmail(
-            sender={
-                "email": "workspace00018@gmail.com",
-                "name": "Technoviz Automation"
-            },
-            to=[{"email": "kkhurana@technovizautomation.com"}],
+        send_mail(
             subject=f"📩 New Webinar Registration: {registration.first_name}",
-            html_content=f"""
-            <p><b>Name:</b> {registration.first_name} {registration.last_name}</p>
-            <p><b>Company:</b> {registration.company_name}</p>
-            <p><b>Email:</b> {registration.email}</p>
-            <p><b>Phone:</b> {registration.phone}</p>
-            <p><b>Registered at:</b> {registration.created_at}</p>
-            """
+            message=(
+                f"Name: {registration.first_name} {registration.last_name}\n"
+                f"Company: {registration.company_name}\n"
+                f"Email: {registration.email}\n"
+                f"Phone: {registration.phone}\n"
+                f"Registered at: {registration.created_at}"
+            ),
+            from_email=None,
+            recipient_list=["rathorabhay633@gmail.com"],
+            fail_silently=False,
         )
-        api.send_transac_email(admin_email)
+
+    except BadHeaderError:
+        print("❌ Bad header in webinar email")
     except Exception as e:
-        print("❌ Brevo email failed:", str(e))
+        print("❌ Email sending failed:", str(e))
 
 
 
