@@ -179,7 +179,7 @@ def send_webinar_emails(registration):
                 f"Registered at: {registration.created_at}"
             ),
             from_email=None,
-            recipient_list=["rathorabhay633@gmail.com"],
+            recipient_list=["kkhurana@technovizautomation.com"],
             fail_silently=False,
         )
 
