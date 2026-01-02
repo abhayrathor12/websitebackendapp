@@ -149,26 +149,7 @@ import os
 
 def send_webinar_emails(registration):
     try:
-        # ✅ Email to User
-        send_mail(
-            subject="🎉 Webinar Registration Successful | Technoviz Automation",
-            message=(
-                f"Hello {registration.first_name},\n\n"
-                "Thank you for registering for our webinar!\n\n"
-                "We have successfully received your registration. "
-                "Our team will share the webinar link with you soon.\n\n"
-                "📞 +91-9999765380 / 0124-4424695\n"
-                "📧 support@technovizautomation.com\n"
-                "🌐 https://technovizautomation.com\n\n"
-                "Best regards,\n"
-                "Technoviz Automation"
-            ),
-            from_email=None,
-            recipient_list=[registration.email],
-            fail_silently=False,
-        )
-
-        # ✅ Email to Admin
+       
         send_mail(
             subject=f"📩 New Webinar Registration: {registration.first_name}",
             message=(
@@ -179,7 +160,7 @@ def send_webinar_emails(registration):
                 f"Registered at: {registration.created_at}"
             ),
             from_email=None,
-            recipient_list=["kkhurana@technovizautomatiom.com"],
+            recipient_list=["kkhurana@technovizautomation.com"],
             fail_silently=False,
         )
 
@@ -221,3 +202,18 @@ class WebinarRegistrationAPIView(APIView):
 def webinar_list(request):
     Webinar = WebinarRegistration.objects.all().order_by("-id")  # latest first
     return render(request, "webinar_contact.html", {"registrations": Webinar})
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+@csrf_exempt
+def delete_webinar(request, pk):
+    WebinarRegistration.objects.filter(id=pk).delete()
+    return JsonResponse({"status": "ok"})
+
+@csrf_exempt
+def delete_multiple_webinar(request):
+    data = json.loads(request.body)
+    WebinarRegistration.objects.filter(id__in=data["ids"]).delete()
+    return JsonResponse({"status": "ok"})
