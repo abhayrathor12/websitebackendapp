@@ -32,7 +32,8 @@ urlpatterns = [
     path("webinar_list/", webinar_list, name="webinar_list"),
     path("blogsview/", blog_list, name="blog_list"),
     path("blog/edit/<int:blog_id>/", edit_blog, name="edit_blog"),
-    
+    path("blog/delete/<int:blog_id>/", delete_blog, name="delete_blog"),
+
 path("webinar/delete/<int:pk>/", delete_webinar),
 path("webinar/delete-multiple/", delete_multiple_webinar),
 

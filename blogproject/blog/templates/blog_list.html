@@ -2,6 +2,35 @@
 
 {% block content %}
 <style>
+
+
+
+
+
+    .delete-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        color: white;
+        background: #ef4444;
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .delete-btn:hover {
+        background: #dc2626;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+    
+
     .blog-list-container {
         max-width: 1200px;
         margin: 0 auto;
@@ -253,10 +282,20 @@
                     
                     <p class="blog-excerpt">{{ blog.excerpt }}</p>
                     
-                    <a href="{% url 'edit_blog' blog.id %}" class="edit-btn">
-                        <span>✏️</span>
-                        <span>Edit</span>
-                    </a>
+                    
+                    <div style="display: flex; gap: 0.75rem;">
+                        <a href="{% url 'edit_blog' blog.id %}" class="edit-btn">
+                            ✏️ Edit
+                        </a>
+
+                        <form method="POST" action="{% url 'delete_blog' blog.id %}"
+                            onsubmit="return confirm('Are you sure you want to delete this blog?');">
+                            {% csrf_token %}
+                            <button type="submit" class="delete-btn">
+                                🗑️ Delete
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </article>
             {% endfor %}

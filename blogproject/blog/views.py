@@ -133,6 +133,19 @@ def blog_list(request):
     blogs = Blog.objects.all().order_by("-publish_date")
     return render(request, "blog_list.html", {"blogs": blogs})
 
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+
+def delete_blog(request, blog_id):
+    blog = get_object_or_404(Blog, id=blog_id)
+
+    if request.method == "POST":
+        blog.delete()
+        messages.success(request, "Blog deleted successfully.")
+        return redirect("blog_list")
+
+    return redirect("blog_list")
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
