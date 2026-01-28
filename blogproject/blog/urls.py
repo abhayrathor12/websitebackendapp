@@ -10,5 +10,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path("con/create/", ContactCreateView.as_view(), name="contact_create"),
     path("webinar/register/", WebinarRegistrationAPIView.as_view(), name="webinar-register"),
-    
+    path("webinar/toggle-attended/<int:pk>/", toggle_attended, name="toggle_attended"),
 ]

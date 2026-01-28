@@ -1,32 +1,63 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
     .webinar-registrations {
         max-width: 1400px;
         margin: 0 auto;
-        padding: 0.5rem;
+        padding: 2rem 1.5rem;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
+
+    /* Header Section */
     .page-header {
-        margin-bottom: 0.5rem;
+        margin-bottom: 2rem;
     }
+
     .page-header h1 {
         font-size: 2rem;
-        font-weight: 700;
-        color: #1f2937;
+        font-weight: 600;
+        color: #111827;
         margin-bottom: 0.5rem;
+        letter-spacing: -0.025em;
     }
+
     .page-header p {
         color: #6b7280;
         font-size: 0.95rem;
+        line-height: 1.5;
     }
 
+    .stats-row {
+        display: flex;
+        gap: 2rem;
+        margin-top: 1rem;
+        align-items: center;
+    }
+
+    .stat-item {
+        font-size: 0.9rem;
+        color: #374151;
+    }
+
+    .stat-item strong {
+        color: #111827;
+        font-weight: 600;
+    }
+
+    /* Actions Bar */
     .actions {
-        margin-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        flex-wrap: wrap;
         gap: 1rem;
+        flex-wrap: wrap;
     }
 
     .search-box {
@@ -34,34 +65,97 @@
         flex: 1;
         max-width: 400px;
     }
+
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        pointer-events: none;
+    }
+
     .search-input {
         width: 100%;
-        padding: 0.75rem 1rem 0.75rem 2.5rem;
+        padding: 0.75rem 1rem 0.75rem 2.75rem;
         border: 1px solid #e5e7eb;
         border-radius: 0.5rem;
         font-size: 0.95rem;
+        transition: all 0.2s;
+        outline: none;
     }
 
-    .download-btn {
+    .search-input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .filter-select {
+        padding: 0.75rem 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+        color: #374151;
+        background-color: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        outline: none;
+        min-width: 180px;
+    }
+
+    .filter-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .action-buttons {
         display: flex;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        display: inline-flex;
         align-items: center;
+        gap: 0.5rem;
         padding: 0.75rem 1.25rem;
-        background-color: #10b981;
-        color: white;
         border-radius: 0.5rem;
         cursor: pointer;
         border: none;
         font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        outline: none;
     }
 
-    .delete-btn {
-        background: #ef4444;
+    .btn-download {
+        background-color: #10b981;
+        color: white;
     }
 
+    .btn-download:hover {
+        background-color: #059669;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-delete {
+        background-color: #ef4444;
+        color: white;
+    }
+
+    .btn-delete:hover {
+        background-color: #dc2626;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    /* Table Container */
     .table-container {
         background: white;
         border-radius: 0.75rem;
         overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
     }
 
     table {
@@ -70,27 +164,164 @@
     }
 
     th, td {
-        padding: 0.8rem;
-        border-bottom: 1px solid #e5e7eb;
+        padding: 1rem 0.75rem;
+        text-align: left;
         font-size: 0.9rem;
     }
 
     thead {
         background: #f9fafb;
+        border-bottom: 2px solid #e5e7eb;
     }
 
-    .pagination {
-        display: flex;
+    th {
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+    }
+
+    tbody tr {
+        border-bottom: 1px solid #f3f4f6;
+        transition: background-color 0.15s;
+    }
+
+    tbody tr:hover {
+        background-color: #f9fafb;
+    }
+
+    tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    td {
+        color: #1f2937;
+    }
+
+    td strong {
+        font-weight: 600;
+        color: #111827;
+    }
+
+    /* Checkbox Styling */
+    input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: #3b82f6;
+    }
+
+    /* Icon Buttons */
+    .icon-btn {
+        display: inline-flex;
+        align-items: center;
         justify-content: center;
-        margin-top: 1rem;
-        gap: 0.5rem;
-    }
-
-    .pagination-btn {
-        padding: 0.4rem 0.8rem;
+        width: 36px;
+        height: 36px;
+        border-radius: 0.375rem;
         border: 1px solid #e5e7eb;
         background: white;
         cursor: pointer;
+        transition: all 0.2s;
+        color: #6b7280;
+    }
+
+    .icon-btn:hover {
+        background: #fee2e2;
+        border-color: #fecaca;
+        color: #dc2626;
+    }
+
+    .icon-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Pagination */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 1.5rem;
+        gap: 0.75rem;
+    }
+
+    .pagination-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid #e5e7eb;
+        background: white;
+        cursor: pointer;
+        border-radius: 0.375rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #374151;
+        transition: all 0.2s;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        background: #f9fafb;
+        border-color: #d1d5db;
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    #pageInfo {
+        font-size: 0.9rem;
+        color: #6b7280;
+        min-width: 120px;
+        text-align: center;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #9ca3af;
+    }
+
+    .empty-state svg {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 1rem;
+        opacity: 0.5;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .webinar-registrations {
+            padding: 1rem;
+        }
+
+        .actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .search-box {
+            max-width: 100%;
+        }
+
+        .filter-select {
+            width: 100%;
+        }
+
+        .action-buttons {
+            width: 100%;
+        }
+
+        .btn {
+            flex: 1;
+            justify-content: center;
+        }
+
+        th, td {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.85rem;
+        }
     }
 </style>
 
@@ -98,28 +329,49 @@
     <div class="page-header">
         <h1>Webinar Registrations</h1>
         <p>View and manage all registrations for the webinar</p>
-        <p style="font-size:0.9rem; color:#374151;">
-            Total Registrations: <strong id="totalCount">{{ registrations|length }}</strong>
-        </p>
-        <p style="font-size:0.85rem; color:#6b7280;">
-            Selected: <strong id="selectedCount">0</strong>
-        </p>
+        <div class="stats-row">
+            <div class="stat-item">
+                Total Registrations: <strong id="totalCount">{{ registrations|length }}</strong>
+            </div>
+            <div class="stat-item">
+                Selected: <strong id="selectedCount">0</strong>
+            </div>
+        </div>
     </div>
 
     <div class="actions">
         <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M17.5 17.5L13.875 13.875M15.8333 9.16667C15.8333 12.8486 12.8486 15.8333 9.16667 15.8333C5.48477 15.8333 2.5 12.8486 2.5 9.16667C2.5 5.48477 5.48477 2.5 9.16667 2.5C12.8486 2.5 15.8333 5.48477 15.8333 9.16667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
             <input
                 type="text"
                 class="search-input"
                 id="searchInput"
-                placeholder="Search..."
+                placeholder="Search by name, email, company..."
                 onkeyup="filterTable()"
             >
         </div>
 
-        <div style="display:flex; gap:0.5rem;">
-            <button class="download-btn" onclick="downloadCSV()">Download CSV</button>
-            <button class="download-btn delete-btn" onclick="deleteSelected()">Delete Selected</button>
+        <select class="filter-select" id="attendedFilter" onchange="filterTable()">
+            <option value="all">All Registrations</option>
+            <option value="attended">Attended Only</option>
+            <option value="not-attended">Not Attended</option>
+        </select>
+
+        <div class="action-buttons">
+            <button class="btn btn-download" onclick="downloadCSV()">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M17.5 12.5V15.8333C17.5 16.2754 17.3244 16.6993 17.0118 17.0118C16.6993 17.3244 16.2754 17.5 15.8333 17.5H4.16667C3.72464 17.5 3.30072 17.3244 2.98816 17.0118C2.67559 16.6993 2.5 16.2754 2.5 15.8333V12.5M5.83333 8.33333L10 12.5M10 12.5L14.1667 8.33333M10 12.5V2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Download CSV
+            </button>
+            <button class="btn btn-delete" onclick="deleteSelected()">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M2.5 5H4.16667M4.16667 5H17.5M4.16667 5V16.6667C4.16667 17.1087 4.34226 17.5326 4.65482 17.8452C4.96738 18.1577 5.39131 18.3333 5.83333 18.3333H14.1667C14.6087 18.3333 15.0326 18.1577 15.3452 17.8452C15.6577 17.5326 15.8333 17.1087 15.8333 16.6667V5H4.16667ZM6.66667 5V3.33333C6.66667 2.89131 6.84226 2.46738 7.15482 2.15482C7.46738 1.84226 7.89131 1.66667 8.33333 1.66667H11.6667C12.1087 1.66667 12.5326 1.84226 12.8452 2.15482C13.1577 2.46738 13.3333 2.89131 13.3333 3.33333V5M8.33333 9.16667V14.1667M11.6667 9.16667V14.1667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Delete Selected
+            </button>
         </div>
     </div>
 
@@ -127,16 +379,18 @@
         <table id="registrationsTable">
             <thead>
                 <tr>
-                    <th>
+                    <th style="width: 50px;">
                         <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)">
                     </th>
-                    <th>No.</th>
+                    <th style="width: 60px;">No.</th>
                     <th>Name</th>
                     <th>Email</th>
                     <th>Company</th>
                     <th>Phone</th>
+                    <th>City</th>
+                    <th style="text-align: center; width: 100px;">Attended</th>
                     <th>Registered On</th>
-                    <th>Action</th>
+                    <th style="text-align: center; width: 80px;">Action</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
@@ -148,17 +402,32 @@
                     <td>{{ reg.email }}</td>
                     <td>{{ reg.company_name|default:"—" }}</td>
                     <td>{{ reg.phone|default:"—" }}</td>
+                    <td>{{ reg.city|default:"—" }}</td>
+                    <td style="text-align: center;">
+                        <input
+                            type="checkbox"
+                            {% if reg.attended %}checked{% endif %}
+                            onchange="toggleAttended({{ reg.id }}, this.checked)"
+                        >
+                    </td>
                     <td>{{ reg.created_at|date:"M d, Y H:i" }}</td>
-                    <td>
-                        <button class="pagination-btn" onclick="deleteSingle({{ reg.id }})">
-                            Delete
+                    <td style="text-align: center;">
+                        <button class="icon-btn" onclick="deleteSingle({{ reg.id }})" title="Delete">
+                            <svg viewBox="0 0 20 20" fill="none">
+                                <path d="M2.5 5H4.16667M4.16667 5H17.5M4.16667 5V16.6667C4.16667 17.1087 4.34226 17.5326 4.65482 17.8452C4.96738 18.1577 5.39131 18.3333 5.83333 18.3333H14.1667C14.6087 18.3333 15.0326 18.1577 15.3452 17.8452C15.6577 17.5326 15.8333 17.1087 15.8333 16.6667V5H4.16667ZM6.66667 5V3.33333C6.66667 2.89131 6.84226 2.46738 7.15482 2.15482C7.46738 1.84226 7.89131 1.66667 8.33333 1.66667H11.6667C12.1087 1.66667 12.5326 1.84226 12.8452 2.15482C13.1577 2.46738 13.3333 2.89131 13.3333 3.33333V5M8.33333 9.16667V14.1667M11.6667 9.16667V14.1667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
                         </button>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" style="text-align:center; padding:2rem;">
-                        No registrations yet
+                    <td colspan="10" class="empty-state">
+                        <svg viewBox="0 0 64 64" fill="none">
+                            <path d="M32 8L8 20V36C8 48 32 56 32 56C32 56 56 48 56 36V20L32 8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M32 32V32.01M32 24V28" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">No registrations yet</div>
+                        <div style="font-size: 0.9rem;">Registrations will appear here once participants sign up</div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -167,9 +436,13 @@
     </div>
 
     <div class="pagination" id="pagination">
-        <button class="pagination-btn" onclick="changePage(-1)" id="prevBtn">Prev</button>
+        <button class="pagination-btn" onclick="changePage(-1)" id="prevBtn">
+            Previous
+        </button>
         <span id="pageInfo"></span>
-        <button class="pagination-btn" onclick="changePage(1)" id="nextBtn">Next</button>
+        <button class="pagination-btn" onclick="changePage(1)" id="nextBtn">
+            Next
+        </button>
     </div>
 </div>
 
@@ -204,6 +477,26 @@ function updateRowNumbers() {
     });
 }
 
+function toggleAttended(id, checked) {
+    fetch(`/api/webinar/toggle-attended/${id}/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({ attended: checked })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) {
+            alert("Failed to update attendance");
+        } else {
+            // Refresh the filter to reflect the change
+            filterTable();
+        }
+    });
+}
+
 function updatePagination() {
     const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
     document.getElementById('pageInfo').innerText = `Page ${currentPage} of ${totalPages || 1}`;
@@ -219,7 +512,26 @@ function changePage(dir) {
 
 function filterTable() {
     const q = searchInput.value.toLowerCase();
-    filteredRows = allRows.filter(row => row.innerText.toLowerCase().includes(q));
+    const attendedFilter = document.getElementById('attendedFilter').value;
+    
+    filteredRows = allRows.filter(row => {
+        // Text search filter
+        const matchesSearch = row.innerText.toLowerCase().includes(q);
+        
+        // Attended status filter
+        let matchesAttended = true;
+        if (attendedFilter !== 'all') {
+            const attendedCheckbox = row.querySelector('td:nth-child(8) input[type="checkbox"]');
+            if (attendedCheckbox) {
+                const isAttended = attendedCheckbox.checked;
+                matchesAttended = (attendedFilter === 'attended' && isAttended) || 
+                                 (attendedFilter === 'not-attended' && !isAttended);
+            }
+        }
+        
+        return matchesSearch && matchesAttended;
+    });
+    
     showPage(1);
 }
 
@@ -240,7 +552,7 @@ document.addEventListener('change', e => {
 });
 
 function deleteSingle(id) {
-    if (!confirm("Delete this record?")) return;
+    if (!confirm("Delete this registration? This action cannot be undone.")) return;
 
     fetch(`/webinar/delete/${id}/`, {
         method: "POST",
@@ -257,7 +569,7 @@ function deleteSelected() {
         return;
     }
 
-    if (!confirm(`Delete ${ids.length} records?`)) return;
+    if (!confirm(`Delete ${ids.length} registration(s)? This action cannot be undone.`)) return;
 
     fetch(`/webinar/delete-multiple/`, {
         method: "POST",
@@ -281,18 +593,29 @@ function downloadCSV() {
         return;
     }
 
-    let csv = "Name,Email,Company,Phone,Registered On\n";
+    let csv = "Name,Email,Company,Phone,City,Attended,Registered On\n";
 
     rowsToExport.forEach(row => {
         const cols = row.querySelectorAll("td");
-        if (cols.length > 1) {
-            csv += `"${cols[2].innerText.trim()}","${cols[3].innerText.trim()}","${cols[4].innerText.trim()}","${cols[5].innerText.trim()}","${cols[6].innerText.trim()}"\n`;
-        }
+
+        if (cols.length < 9) return;
+
+        const name = cols[2].innerText.trim();
+        const email = cols[3].innerText.trim();
+        const company = cols[4].innerText.trim();
+        const phone = cols[5].innerText.trim();
+        const city = cols[6].innerText.trim();
+        const attended = cols[7].querySelector("input")?.checked ? "Yes" : "No";
+        const registeredOn = cols[8].innerText.trim();
+
+        csv += `"${name}","${email}","${company}","${phone}","${city}","${attended}","${registeredOn}"\n`;
     });
 
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-    link.download = "webinar_registrations.csv";
+
+    link.href = URL.createObjectURL(blob);
+    link.download = `webinar_registrations_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
 }
 </script>

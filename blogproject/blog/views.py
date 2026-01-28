@@ -230,3 +230,17 @@ def delete_multiple_webinar(request):
     data = json.loads(request.body)
     WebinarRegistration.objects.filter(id__in=data["ids"]).delete()
     return JsonResponse({"status": "ok"})
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import get_object_or_404
+import json
+
+@csrf_exempt
+def toggle_attended(request, pk):
+    if request.method == "POST":
+        reg = get_object_or_404(WebinarRegistration, pk=pk)
+        data = json.loads(request.body)
+        reg.attended = data.get("attended", False)
+        reg.save()
+        return JsonResponse({"success": True, "attended": reg.attended})

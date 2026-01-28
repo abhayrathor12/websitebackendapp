@@ -37,6 +37,9 @@ class WebinarRegistration(models.Model):
     email = models.EmailField()
     phone = models.CharField(max_length=15)
 
+    city = models.CharField(max_length=100,null=True,blank=True)  # ✅ NEW
+    attended = models.BooleanField(default=False)  # ✅ NEW
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
