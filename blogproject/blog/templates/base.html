@@ -16,7 +16,7 @@
             background-color: #f5f5f5;
         }
 
-        /* Top Navbar */
+        /* ── Top Navbar ── */
         .navbar {
             background-color: #2c3e50;
             color: white;
@@ -30,11 +30,18 @@
             left: 0;
             right: 0;
             z-index: 1000;
+            height: 60px;
         }
 
         .navbar h1 {
             font-size: 1.5rem;
             font-weight: 600;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
 
         .navbar-right {
@@ -55,7 +62,39 @@
             background-color: #34495e;
         }
 
-        /* Sidebar */
+        /* ── Hamburger Button ── */
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            line-height: 1;
+            transition: background-color 0.2s;
+            /* Always visible — hidden via display on desktop */
+            display: none;
+        }
+
+        .menu-toggle:hover {
+            background-color: #34495e;
+        }
+
+        /* ── Sidebar Overlay (mobile) ── */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 998;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
+        /* ── Sidebar ── */
         .sidebar {
             position: fixed;
             left: 0;
@@ -65,6 +104,9 @@
             background-color: #34495e;
             padding: 2rem 0;
             box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+            z-index: 999;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
         }
 
         .sidebar-menu {
@@ -101,14 +143,16 @@
             margin-right: 1rem;
             width: 20px;
             height: 20px;
+            flex-shrink: 0;
         }
 
-        /* Main Content */
+        /* ── Main Content ── */
         .main-content {
             margin-left: 250px;
             margin-top: 60px;
             padding: 0.5rem;
             min-height: calc(100vh - 60px);
+            transition: margin-left 0.3s ease;
         }
 
         .content-wrapper {
@@ -118,41 +162,80 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
+        /* ══════════════════════════════════
+           TABLET  (768px – 1024px)
+        ══════════════════════════════════ */
+        @media (max-width: 1024px) {
             .sidebar {
-                transform: translateX(-250px);
-                transition: transform 0.3s;
+                width: 220px;
             }
 
+            .main-content {
+                margin-left: 220px;
+            }
+        }
+
+        /* ══════════════════════════════════
+           MOBILE  (≤ 768px)
+        ══════════════════════════════════ */
+        @media (max-width: 768px) {
+            /* Show hamburger */
+            .menu-toggle {
+                display: block;
+            }
+
+            /* Slide sidebar off-screen by default */
+            .sidebar {
+                transform: translateX(-100%);
+                width: 250px;
+            }
+
+            /* Slide in when active */
             .sidebar.active {
                 transform: translateX(0);
             }
 
+            /* Full-width content, no left margin */
             .main-content {
                 margin-left: 0;
+                padding: 0.5rem;
             }
 
-            .menu-toggle {
-                display: block;
-                background: none;
-                border: none;
-                color: white;
-                font-size: 1.5rem;
-                cursor: pointer;
+            .navbar {
+                padding: 1rem;
+            }
+
+            .navbar h1 {
+                font-size: 1.2rem;
+            }
+
+            .content-wrapper {
+                padding: 1rem;
+                border-radius: 6px;
             }
         }
 
-        .menu-toggle {
-            display: none;
+        /* ══════════════════════════════════
+           SMALL MOBILE  (≤ 480px)
+        ══════════════════════════════════ */
+        @media (max-width: 480px) {
+            .navbar h1 {
+                font-size: 1rem;
+            }
+
+            .sidebar-menu a {
+                padding: 0.85rem 1.5rem;
+                font-size: 0.95rem;
+            }
         }
     </style>
 </head>
 <body>
+
     <!-- Top Navbar -->
     <nav class="navbar">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-            <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+        <div class="navbar-left">
+            <button class="menu-toggle" id="menuToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
             <h1>Dashboard</h1>
         </div>
         {% comment %} <div class="navbar-right">
@@ -161,12 +244,15 @@
         </div> {% endcomment %}
     </nav>
 
+    <!-- Overlay (mobile backdrop) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <ul class="sidebar-menu">
             <li>
                 <a href="{% url 'contact_list' %}" 
-                class="{% if request.resolver_match.url_name == 'contact_list' %}active{% endif %}">
+                   class="{% if request.resolver_match.url_name == 'contact_list' %}active{% endif %}">
                     <svg fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
                     </svg>
@@ -175,40 +261,36 @@
             </li>
             <li>
                 <a href="{% url 'webinar_list' %}" 
-                class="{% if request.resolver_match.url_name == 'webinar_list' %}active{% endif %}">
+                   class="{% if request.resolver_match.url_name == 'webinar_list' %}active{% endif %}">
                     <svg fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
                     </svg>
                     Webinar Contacts
                 </a>
             </li>
-
-<li>
-    <a href="{% url 'add_blog' %}" 
-       class="{% if request.resolver_match.url_name == 'add_blog' %}active{% endif %}">
-        <svg fill="currentColor" viewBox="0 0 20 20">
-            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
-        </svg>
-        Write Blog
-    </a>
-</li>
-
-<li>
-    <a href="{% url 'blog_list' %}" 
-       class="{% if request.resolver_match.url_name == 'blog_list' %}active{% endif %}">
-        <svg fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/>
-        </svg>
-        View Blogs
-    </a>
-</li>
-
-           
+            <li>
+                <a href="{% url 'add_blog' %}" 
+                   class="{% if request.resolver_match.url_name == 'add_blog' %}active{% endif %}">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                    </svg>
+                    Write Blog
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'blog_list' %}" 
+                   class="{% if request.resolver_match.url_name == 'blog_list' %}active{% endif %}">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"/>
+                    </svg>
+                    View Blogs
+                </a>
+            </li>
         </ul>
     </aside>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="main-content" id="mainContent">
         <div class="content-wrapper">
             {% block content %}
             <h2>Welcome to Blog Dashboard</h2>
@@ -218,21 +300,45 @@
     </main>
 
     <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('active');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const toggle  = document.getElementById('menuToggle');
+
+        function openSidebar() {
+            sidebar.classList.add('active');
+            overlay.classList.add('active');
+            toggle.setAttribute('aria-expanded', 'true');
+            toggle.textContent = '✕';
         }
 
-        // Close sidebar when clicking outside on mobile
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById('sidebar');
-            const toggle = document.querySelector('.menu-toggle');
-            
-            if (window.innerWidth <= 768 && 
-                !sidebar.contains(event.target) && 
-                !toggle.contains(event.target)) {
-                sidebar.classList.remove('active');
+        function closeSidebar() {
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.textContent = '☰';
+        }
+
+        function toggleSidebar() {
+            sidebar.classList.contains('active') ? closeSidebar() : openSidebar();
+        }
+
+        toggle.addEventListener('click', toggleSidebar);
+
+        // Close when tapping the overlay
+        overlay.addEventListener('click', closeSidebar);
+
+        // Close sidebar on resize back to desktop
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                closeSidebar();
             }
+        });
+
+        // Close sidebar when a nav link is clicked on mobile
+        sidebar.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) closeSidebar();
+            });
         });
     </script>
 </body>
