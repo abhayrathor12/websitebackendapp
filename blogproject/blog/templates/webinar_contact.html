@@ -291,40 +291,161 @@
         opacity: 0.5;
     }
 
+    /* ===================== */
+    /* CONFIRMATION MODAL    */
+    /* ===================== */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(3px);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+        animation: overlayFadeIn 0.18s ease;
+    }
+
+    @keyframes overlayFadeIn {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px) scale(0.96); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .modal-box {
+        background: #ffffff;
+        border-radius: 1.25rem;
+        padding: 2rem 2rem 1.75rem;
+        width: 100%;
+        max-width: 400px;
+        margin: 1rem;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+        animation: slideUp 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+        text-align: center;
+    }
+
+    .modal-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.25rem;
+    }
+
+    .modal-icon.attended {
+        background: #d1fae5;
+        color: #059669;
+    }
+
+    .modal-icon.not-attended {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .modal-icon svg {
+        width: 30px;
+        height: 30px;
+    }
+
+    .modal-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+    }
+
+    .modal-message {
+        font-size: 0.9rem;
+        color: #6b7280;
+        line-height: 1.6;
+        margin-bottom: 1.75rem;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .modal-btn {
+        flex: 1;
+        padding: 0.72rem 1rem;
+        border-radius: 0.6rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all 0.18s;
+        outline: none;
+    }
+
+    .modal-btn-cancel {
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #e5e7eb;
+    }
+
+    .modal-btn-cancel:hover {
+        background: #e5e7eb;
+    }
+
+    .modal-btn-confirm-green {
+        background: #10b981;
+        color: white;
+    }
+
+    .modal-btn-confirm-green:hover {
+        background: #059669;
+        box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+        transform: translateY(-1px);
+    }
+
+    .modal-btn-confirm-red {
+        background: #ef4444;
+        color: white;
+    }
+
+    .modal-btn-confirm-red:hover {
+        background: #dc2626;
+        box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+        transform: translateY(-1px);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
-        .webinar-registrations {
-            padding: 1rem;
-        }
-
-        .actions {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .search-box {
-            max-width: 100%;
-        }
-
-        .filter-select {
-            width: 100%;
-        }
-
-        .action-buttons {
-            width: 100%;
-        }
-
-        .btn {
-            flex: 1;
-            justify-content: center;
-        }
-
-        th, td {
-            padding: 0.75rem 0.5rem;
-            font-size: 0.85rem;
-        }
+        .webinar-registrations { padding: 1rem; }
+        .actions { flex-direction: column; align-items: stretch; }
+        .search-box { max-width: 100%; }
+        .filter-select { width: 100%; }
+        .action-buttons { width: 100%; }
+        .btn { flex: 1; justify-content: center; }
+        th, td { padding: 0.75rem 0.5rem; font-size: 0.85rem; }
     }
 </style>
+
+<!-- ===================== -->
+<!--   CONFIRMATION MODAL  -->
+<!-- ===================== -->
+<div class="modal-overlay" id="attendedModal">
+    <div class="modal-box">
+        <div class="modal-icon" id="modalIcon"></div>
+        <div class="modal-title" id="modalTitle"></div>
+        <div class="modal-message" id="modalMessage"></div>
+        <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeModal(false)">Cancel</button>
+            <button class="modal-btn" id="modalConfirmBtn" onclick="closeModal(true)">Confirm</button>
+        </div>
+    </div>
+</div>
 
 <div class="webinar-registrations">
     <div class="page-header">
@@ -408,7 +529,7 @@
                         <input
                             type="checkbox"
                             {% if reg.attended %}checked{% endif %}
-                            onchange="toggleAttended({{ reg.id }}, this.checked)"
+                            onchange="toggleAttended({{ reg.id }}, this.checked, this)"
                         >
                     </td>
                     <td>{{ reg.created_at|date:"M d, Y H:i" }}</td>
@@ -437,13 +558,9 @@
     </div>
 
     <div class="pagination" id="pagination">
-        <button class="pagination-btn" onclick="changePage(-1)" id="prevBtn">
-            Previous
-        </button>
+        <button class="pagination-btn" onclick="changePage(-1)" id="prevBtn">Previous</button>
         <span id="pageInfo"></span>
-        <button class="pagination-btn" onclick="changePage(1)" id="nextBtn">
-            Next
-        </button>
+        <button class="pagination-btn" onclick="changePage(1)" id="nextBtn">Next</button>
     </div>
 </div>
 
@@ -463,10 +580,8 @@ function showPage(page) {
     currentPage = page;
     const start = (page - 1) * rowsPerPage;
     const end = start + rowsPerPage;
-
     allRows.forEach(r => r.style.display = 'none');
     filteredRows.slice(start, end).forEach(r => r.style.display = '');
-
     updateRowNumbers();
     updatePagination();
 }
@@ -475,26 +590,6 @@ function updateRowNumbers() {
     filteredRows.forEach((row, index) => {
         const cell = row.querySelector('.row-number');
         if (cell) cell.textContent = index + 1;
-    });
-}
-
-function toggleAttended(id, checked) {
-    fetch(`/api/webinar/toggle-attended/${id}/`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token }}"
-        },
-        body: JSON.stringify({ attended: checked })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (!data.success) {
-            alert("Failed to update attendance");
-        } else {
-            // Refresh the filter to reflect the change
-            filterTable();
-        }
     });
 }
 
@@ -512,30 +607,124 @@ function changePage(dir) {
 }
 
 function filterTable() {
-    const q = searchInput.value.toLowerCase();
+    const q = document.getElementById('searchInput').value.toLowerCase();
     const attendedFilter = document.getElementById('attendedFilter').value;
-    
+
     filteredRows = allRows.filter(row => {
-        // Text search filter
         const matchesSearch = row.innerText.toLowerCase().includes(q);
-        
-        // Attended status filter
         let matchesAttended = true;
         if (attendedFilter !== 'all') {
             const attendedCheckbox = row.querySelector('td:nth-child(8) input[type="checkbox"]');
             if (attendedCheckbox) {
                 const isAttended = attendedCheckbox.checked;
-                matchesAttended = (attendedFilter === 'attended' && isAttended) || 
-                                 (attendedFilter === 'not-attended' && !isAttended);
+                matchesAttended = (attendedFilter === 'attended' && isAttended) ||
+                                  (attendedFilter === 'not-attended' && !isAttended);
             }
         }
-        
         return matchesSearch && matchesAttended;
     });
-    
+
     showPage(1);
 }
 
+/* ========================= */
+/*   ATTENDED MODAL LOGIC    */
+/* ========================= */
+let _pendingId      = null;
+let _pendingChecked = null;
+let _pendingEl      = null;
+
+function toggleAttended(id, checked, checkboxEl) {
+    // Revert the checkbox immediately — wait for modal confirmation
+    checkboxEl.checked = !checked;
+
+    _pendingId      = id;
+    _pendingChecked = checked;
+    _pendingEl      = checkboxEl;
+
+    const icon       = document.getElementById('modalIcon');
+    const title      = document.getElementById('modalTitle');
+    const message    = document.getElementById('modalMessage');
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+
+    if (checked) {
+        icon.className = 'modal-icon attended';
+        icon.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>`;
+        title.textContent      = 'Mark as Attended?';
+        message.textContent    = 'Are you sure you want to mark this participant as attended?';
+        confirmBtn.className   = 'modal-btn modal-btn-confirm-green';
+        confirmBtn.textContent = 'Yes, Mark Attended';
+    } else {
+        icon.className = 'modal-icon not-attended';
+        icon.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>`;
+        title.textContent      = 'Remove Attended Status?';
+        message.textContent    = 'Are you sure you want to mark this participant as not attended?';
+        confirmBtn.className   = 'modal-btn modal-btn-confirm-red';
+        confirmBtn.textContent = 'Yes, Mark Not Attended';
+    }
+
+    document.getElementById('attendedModal').classList.add('active');
+}
+
+function closeModal(confirmed) {
+    document.getElementById('attendedModal').classList.remove('active');
+
+    if (!confirmed) {
+        // Cancelled — checkbox already reverted, do nothing
+        _pendingId = _pendingChecked = _pendingEl = null;
+        return;
+    }
+
+    // Apply the intended state
+    _pendingEl.checked = _pendingChecked;
+
+    const id      = _pendingId;
+    const checked = _pendingChecked;
+    const el      = _pendingEl;
+
+    _pendingId = _pendingChecked = _pendingEl = null;
+
+    fetch(`/api/webinar/toggle-attended/${id}/`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({ attended: checked })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) {
+            el.checked = !checked; // revert on API failure
+        } else {
+            filterTable();
+        }
+    })
+    .catch(() => {
+        el.checked = !checked; // revert on network error
+    });
+}
+
+// Close when clicking the dark backdrop
+document.getElementById('attendedModal').addEventListener('click', function (e) {
+    if (e.target === this) closeModal(false);
+});
+
+// Close on Escape key
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeModal(false);
+});
+
+/* ========================= */
+/*  SELECT / DELETE / EXPORT */
+/* ========================= */
 function toggleSelectAll(source) {
     document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = source.checked);
     updateSelectedCount();
@@ -547,14 +736,11 @@ function updateSelectedCount() {
 }
 
 document.addEventListener('change', e => {
-    if (e.target.classList.contains('row-checkbox')) {
-        updateSelectedCount();
-    }
+    if (e.target.classList.contains('row-checkbox')) updateSelectedCount();
 });
 
 function deleteSingle(id) {
     if (!confirm("Delete this registration? This action cannot be undone.")) return;
-
     fetch(`/webinar/delete/${id}/`, {
         method: "POST",
         headers: { "X-CSRFToken": "{{ csrf_token }}" }
@@ -565,11 +751,7 @@ function deleteSelected() {
     const ids = Array.from(document.querySelectorAll('.row-checkbox:checked'))
         .map(cb => cb.closest('tr').dataset.id);
 
-    if (!ids.length) {
-        alert("No rows selected");
-        return;
-    }
-
+    if (!ids.length) { alert("No rows selected"); return; }
     if (!confirm(`Delete ${ids.length} registration(s)? This action cannot be undone.`)) return;
 
     fetch(`/webinar/delete-multiple/`, {
@@ -583,38 +765,29 @@ function deleteSelected() {
 }
 
 function downloadCSV() {
-    const selectedRows = Array.from(
-        document.querySelectorAll('.row-checkbox:checked')
-    ).map(cb => cb.closest('tr'));
+    const selectedRows = Array.from(document.querySelectorAll('.row-checkbox:checked'))
+        .map(cb => cb.closest('tr'));
 
     const rowsToExport = selectedRows.length > 0 ? selectedRows : filteredRows;
-
-    if (!rowsToExport.length) {
-        alert("No data to export");
-        return;
-    }
+    if (!rowsToExport.length) { alert("No data to export"); return; }
 
     let csv = "Name,Email,Company,Phone,City,Attended,Registered On\n";
 
     rowsToExport.forEach(row => {
         const cols = row.querySelectorAll("td");
-
         if (cols.length < 9) return;
-
-        const name = cols[2].innerText.trim();
-        const email = cols[3].innerText.trim();
-        const company = cols[4].innerText.trim();
-        const phone = cols[5].innerText.trim();
-        const city = cols[6].innerText.trim();
-        const attended = cols[7].querySelector("input")?.checked ? "Yes" : "No";
+        const name         = cols[2].innerText.trim();
+        const email        = cols[3].innerText.trim();
+        const company      = cols[4].innerText.trim();
+        const phone        = cols[5].innerText.trim();
+        const city         = cols[6].innerText.trim();
+        const attended     = cols[7].querySelector("input")?.checked ? "Yes" : "No";
         const registeredOn = cols[8].innerText.trim();
-
         csv += `"${name}","${email}","${company}","${phone}","${city}","${attended}","${registeredOn}"\n`;
     });
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-
     link.href = URL.createObjectURL(blob);
     link.download = `webinar_registrations_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
