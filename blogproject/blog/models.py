@@ -44,3 +44,45 @@ class WebinarRegistration(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} - {self.email}"
+
+from django.db import models
+
+
+class IdeathonRegistration(models.Model):
+    PARTICIPATION_CHOICES = (
+        ("Individual", "Individual"),
+        ("Team", "Team"),
+    )
+
+    full_name = models.CharField(max_length=200)
+    email = models.EmailField(unique=True)
+    phone = models.CharField(max_length=20)
+
+    participation_type = models.CharField(
+        max_length=20,
+        choices=PARTICIPATION_CHOICES
+    )
+
+    team_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True
+    )
+
+    idea_title = models.CharField(max_length=255)
+
+    # Store ["AI/ML","IIoT"]
+    focus_areas = models.JSONField(default=list)
+
+    idea_description = models.TextField()
+
+    pitch_deck = models.FileField(
+        upload_to="pitch_decks/",
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.full_name
