@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Blog,Contact
+from .models import Blog,Contact, MasterClassRegistration
 
 class BlogSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
@@ -55,3 +55,14 @@ class IdeathonRegistrationSerializer(serializers.ModelSerializer):
                 )
 
         return value
+    
+    
+from rest_framework import serializers
+from .models import MasterClassRegistration
+
+
+class MasterClassRegistrationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MasterClassRegistration
+        fields = ["id", "name", "email", "phone", "payment_id", "order_id", "amount", "created_at"]
+        read_only_fields = ["id", "payment_id", "order_id", "amount", "created_at"]

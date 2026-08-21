@@ -304,3 +304,89 @@ def delete_multiple_ideathon(request):
     data = json.loads(request.body)
     IdeathonRegistration.objects.filter(id__in=data["ids"]).delete()
     return JsonResponse({"status": "ok"})
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+import razorpay
+from django.conf import settings
+
+from .models import WebinarRegistration
+from .serializers import WebinarRegistrationSerializer
+
+client = razorpay.Client(auth=(
+    settings.RAZORPAY_KEY_ID,
+    settings.RAZORPAY_KEY_SECRET
+))
+
+
+class CreateOrderView(APIView):
+
+    def post(self, request):
+        amount = 100  # paise = ₹99.00 — adjust to your actual fee
+
+        order = client.order.create({
+            "amount": amount,
+            "currency": "INR",
+            "payment_capture": 1
+        })
+
+        return Response({
+            "order_id": order["id"],
+            "amount": amount,
+            "key": settings.RAZORPAY_KEY_ID
+        })
+
+
+class VerifyPaymentView(APIView):
+
+    def post(self, request):
+        data = request.data
+
+        params_dict = {
+            "razorpay_order_id": data.get("razorpay_order_id"),
+            "razorpay_payment_id": data.get("razorpay_payment_id"),
+            "razorpay_signature": data.get("razorpay_signature"),
+        }
+
+        try:
+            client.utility.verify_payment_signature(params_dict)
+
+            registration_data = data.get("registration_data", {})
+
+            # avoid saving twice if the client retries the request
+            if WebinarRegistration.objects.filter(
+                payment_id=data.get("razorpay_payment_id")
+            ).exists():
+                return Response({
+                    "success": True,
+                    "message": "Registration already recorded"
+                })
+
+            serializer = WebinarRegistrationSerializer(data=registration_data)
+
+            if serializer.is_valid():
+                serializer.save(
+                    payment_id=data.get("razorpay_payment_id"),
+                    order_id=data.get("razorpay_order_id"),
+                )
+                return Response({
+                    "success": True,
+                    "message": "Payment verified & registration saved"
+                })
+
+            return Response({
+                "success": False,
+                "errors": serializer.errors
+            }, status=400)
+
+        except razorpay.errors.SignatureVerificationError:
+            return Response({
+                "success": False,
+                "message": "Payment signature verification failed"
+            }, status=400)
+
+        except Exception as e:
+            return Response({
+                "success": False,
+                "message": str(e)
+            }, status=400)

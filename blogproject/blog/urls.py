@@ -19,4 +19,6 @@ urlpatterns = [
      path("ideathon-list/", ideathon_list, name="ideathon-list"),
 path("ideathon/delete/<int:pk>/", delete_ideathon, name="delete-ideathon"),
 path("ideathon/delete-multiple/", delete_multiple_ideathon, name="delete-multiple-ideathon"),
+ path("create-order/", CreateOrderView.as_view(), name="create-order"),
+    path("verify-payment/", VerifyPaymentView.as_view(), name="verify-payment"),
 ]
