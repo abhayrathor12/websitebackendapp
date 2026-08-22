@@ -309,9 +309,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 import razorpay
 from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
-from .models import WebinarRegistration
-from .serializers import WebinarRegistrationSerializer
+from django.conf import settings
+
+from .models import MasterClassRegistration
+from .serializers import MasterClassRegistrationSerializer
 
 client = razorpay.Client(auth=(
     settings.RAZORPAY_KEY_ID,
@@ -322,7 +326,7 @@ client = razorpay.Client(auth=(
 class CreateOrderView(APIView):
 
     def post(self, request):
-        amount = 100  # paise = ₹99.00 — adjust to your actual fee
+        amount = 584982    # ₹4,999 in paise — your frontend shows ₹4,999 + GST but you're sending amount=100
 
         order = client.order.create({
             "amount": amount,
@@ -353,8 +357,7 @@ class VerifyPaymentView(APIView):
 
             registration_data = data.get("registration_data", {})
 
-            # avoid saving twice if the client retries the request
-            if WebinarRegistration.objects.filter(
+            if MasterClassRegistration.objects.filter(
                 payment_id=data.get("razorpay_payment_id")
             ).exists():
                 return Response({
@@ -362,7 +365,7 @@ class VerifyPaymentView(APIView):
                     "message": "Registration already recorded"
                 })
 
-            serializer = WebinarRegistrationSerializer(data=registration_data)
+            serializer = MasterClassRegistrationSerializer(data=registration_data)
 
             if serializer.is_valid():
                 serializer.save(
