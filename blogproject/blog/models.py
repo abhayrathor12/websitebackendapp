@@ -98,7 +98,7 @@ class MasterClassRegistration(models.Model):
 
     payment_id = models.CharField(max_length=100, unique=True)
     order_id = models.CharField(max_length=100, blank=True, null=True)
-    amount = models.PositiveIntegerField(default=9900)  # in paise
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=99.00)  # in rupees
 
     created_at = models.DateTimeField(auto_now_add=True)
 

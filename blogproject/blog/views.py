@@ -317,6 +317,15 @@ from django.conf import settings
 from .models import MasterClassRegistration
 from .serializers import MasterClassRegistrationSerializer
 
+from decimal import Decimal
+from rest_framework.views import APIView
+from rest_framework.response import Response
+import razorpay
+from django.conf import settings
+
+from .models import MasterClassRegistration
+from .serializers import MasterClassRegistrationSerializer
+
 client = razorpay.Client(auth=(
     settings.RAZORPAY_KEY_ID,
     settings.RAZORPAY_KEY_SECRET
@@ -326,7 +335,7 @@ client = razorpay.Client(auth=(
 class CreateOrderView(APIView):
 
     def post(self, request):
-        amount = 584982    # ₹4,999 in paise — your frontend shows ₹4,999 + GST but you're sending amount=100
+        amount = 584982  # in paise
 
         order = client.order.create({
             "amount": amount,
@@ -365,7 +374,7 @@ class VerifyPaymentView(APIView):
 
             # Fetch the actual captured payment from Razorpay - source of truth for amount
             payment = client.payment.fetch(payment_id)
-            actual_amount = payment["amount"]  # in paise, whatever was really charged
+            actual_amount_rupees = Decimal(payment["amount"]) / Decimal(100)
 
             registration_data = data.get("registration_data", {})
             serializer = MasterClassRegistrationSerializer(data=registration_data)
@@ -374,7 +383,7 @@ class VerifyPaymentView(APIView):
                 serializer.save(
                     payment_id=payment_id,
                     order_id=data.get("razorpay_order_id"),
-                    amount=actual_amount,
+                    amount=actual_amount_rupees,
                 )
                 return Response({
                     "success": True,
