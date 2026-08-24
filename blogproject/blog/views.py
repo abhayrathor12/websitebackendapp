@@ -355,22 +355,26 @@ class VerifyPaymentView(APIView):
         try:
             client.utility.verify_payment_signature(params_dict)
 
-            registration_data = data.get("registration_data", {})
+            payment_id = data.get("razorpay_payment_id")
 
-            if MasterClassRegistration.objects.filter(
-                payment_id=data.get("razorpay_payment_id")
-            ).exists():
+            if MasterClassRegistration.objects.filter(payment_id=payment_id).exists():
                 return Response({
                     "success": True,
                     "message": "Registration already recorded"
                 })
 
+            # Fetch the actual captured payment from Razorpay - source of truth for amount
+            payment = client.payment.fetch(payment_id)
+            actual_amount = payment["amount"]  # in paise, whatever was really charged
+
+            registration_data = data.get("registration_data", {})
             serializer = MasterClassRegistrationSerializer(data=registration_data)
 
             if serializer.is_valid():
                 serializer.save(
-                    payment_id=data.get("razorpay_payment_id"),
+                    payment_id=payment_id,
                     order_id=data.get("razorpay_order_id"),
+                    amount=actual_amount,
                 )
                 return Response({
                     "success": True,
@@ -393,7 +397,6 @@ class VerifyPaymentView(APIView):
                 "success": False,
                 "message": str(e)
             }, status=400)
-            
             
 from django.shortcuts import render
 from django.http import JsonResponse
