@@ -21,4 +21,7 @@ path("ideathon/delete/<int:pk>/", delete_ideathon, name="delete-ideathon"),
 path("ideathon/delete-multiple/", delete_multiple_ideathon, name="delete-multiple-ideathon"),
  path("create-order/", CreateOrderView.as_view(), name="create-order"),
     path("verify-payment/", VerifyPaymentView.as_view(), name="verify-payment"),
+    path("masterclass-list/", masterclass_list, name="masterclass-list"),
+path("masterclass/delete/<int:pk>/", delete_masterclass, name="delete-masterclass"),
+path("masterclass/delete-multiple/", delete_multiple_masterclass, name="delete-multiple-masterclass"),
 ]

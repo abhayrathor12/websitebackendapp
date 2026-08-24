@@ -393,3 +393,29 @@ class VerifyPaymentView(APIView):
                 "success": False,
                 "message": str(e)
             }, status=400)
+            
+            
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+from .models import MasterClassRegistration
+
+
+def masterclass_list(request):
+    registrations = MasterClassRegistration.objects.all().order_by("-id")
+    return render(request, "masterclass_list.html", {"registrations": registrations})
+
+
+@csrf_exempt
+def delete_masterclass(request, pk):
+    MasterClassRegistration.objects.filter(id=pk).delete()
+    return JsonResponse({"status": "ok"})
+
+
+@csrf_exempt
+def delete_multiple_masterclass(request):
+    data = json.loads(request.body)
+    MasterClassRegistration.objects.filter(id__in=data["ids"]).delete()
+    return JsonResponse({"status": "ok"})
