@@ -1,5 +1,8 @@
 from django.db import models
 
+from .images import to_webp
+
+
 class Blog(models.Model):
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True)
@@ -11,6 +14,16 @@ class Blog(models.Model):
     publish_date = models.DateField()
     seo_meta_title = models.CharField(max_length=200)
     seo_description = models.TextField()
+
+    def save(self, *args, **kwargs):
+        # A newly uploaded image is converted to a smaller WebP before it is stored
+        image = self.featured_image
+        if image and not image._committed:
+            try:
+                self.featured_image = to_webp(image)
+            except Exception as exc:
+                print("Could not optimize blog image, keeping the original:", exc)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title

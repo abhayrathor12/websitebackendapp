@@ -29,9 +29,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-$9*$^&%**9je*ecm_0j*n_s=!9&k^_^627*dr#@%p(0+p&9@(_"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Off on the live server. For local development put DJANGO_DEBUG=1 in your .env file.
+DEBUG = os.environ.get("DJANGO_DEBUG") == "1"
 CORS_ALLOW_ALL_ORIGINS = True
-ALLOWED_HOSTS = ['websiteBackend.pythonanywhere.com','192.168.1.60']
+ALLOWED_HOSTS = ['websiteBackend.pythonanywhere.com','192.168.1.60','localhost','127.0.0.1']
 
 
 # Application definition

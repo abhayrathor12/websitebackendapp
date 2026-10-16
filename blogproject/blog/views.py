@@ -8,6 +8,18 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.http import require_POST
+from rest_framework.permissions import AllowAny, IsAdminUser
+
+
+class PublicPostAdminGet:
+    """Anyone can submit (POST); only logged-in staff can read the list (GET)."""
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [AllowAny()]
+        return [IsAdminUser()]
 
 
 
@@ -66,11 +78,14 @@ class ContactCreateView(APIView):
        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ContactViewSet(viewsets.ModelViewSet):  # allow POST
+class ContactViewSet(viewsets.ModelViewSet):
+    # Not used by the website (it posts to con/create/); admin-only so leads stay private
+    permission_classes = [IsAdminUser]
     queryset = Contact.objects.all().order_by('-created_at')
     serializer_class = ContactSerializer
     
 
+@staff_member_required
 def add_blog(request):
     if request.method == "POST":
         title = request.POST.get("title")
@@ -103,6 +118,7 @@ def add_blog(request):
 
 
 
+@staff_member_required
 def edit_blog(request, blog_id):
     blog = get_object_or_404(Blog, id=blog_id)
 
@@ -125,10 +141,12 @@ def edit_blog(request, blog_id):
 
     return render(request, "edit.html", {"blog": blog})
 
+@staff_member_required
 def contact_list(request):
     contacts = Contact.objects.all().order_by("-id")  # latest first
     return render(request, "contact_list.html", {"contacts": contacts})
 
+@staff_member_required
 def blog_list(request):
     blogs = Blog.objects.all().order_by("-publish_date")
     return render(request, "blog_list.html", {"blogs": blogs})
@@ -136,6 +154,7 @@ def blog_list(request):
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 
+@staff_member_required
 def delete_blog(request, blog_id):
     blog = get_object_or_404(Blog, id=blog_id)
 
@@ -184,7 +203,7 @@ def send_webinar_emails(registration):
 
 
 
-class WebinarRegistrationAPIView(APIView):
+class WebinarRegistrationAPIView(PublicPostAdminGet, APIView):
 
     def post(self, request):
         serializer = WebinarRegistrationSerializer(data=request.data)
@@ -212,6 +231,7 @@ class WebinarRegistrationAPIView(APIView):
         serializer = WebinarRegistrationSerializer(registrations, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+@staff_member_required
 def webinar_list(request):
     Webinar = WebinarRegistration.objects.all().order_by("-id")  # latest first
     return render(request, "webinar_contact.html", {"registrations": Webinar})
@@ -220,12 +240,14 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 
-@csrf_exempt
+@staff_member_required
+@require_POST
 def delete_webinar(request, pk):
     WebinarRegistration.objects.filter(id=pk).delete()
     return JsonResponse({"status": "ok"})
 
-@csrf_exempt
+@staff_member_required
+@require_POST
 def delete_multiple_webinar(request):
     data = json.loads(request.body)
     WebinarRegistration.objects.filter(id__in=data["ids"]).delete()
@@ -236,7 +258,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 import json
 
-@csrf_exempt
+@staff_member_required
+@require_POST
 def toggle_attended(request, pk):
     if request.method == "POST":
         reg = get_object_or_404(WebinarRegistration, pk=pk)
@@ -255,7 +278,7 @@ from .models import IdeathonRegistration
 from .serializers import IdeathonRegistrationSerializer
 
 
-class IdeathonRegistrationAPIView(APIView):
+class IdeathonRegistrationAPIView(PublicPostAdminGet, APIView):
 
     parser_classes = [MultiPartParser, FormParser]
 
@@ -288,18 +311,21 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 
 
+@staff_member_required
 def ideathon_list(request):
     registrations = IdeathonRegistration.objects.all().order_by("-id")
     return render(request, "ideathon_list.html", {"registrations": registrations})
 
 
-@csrf_exempt
+@staff_member_required
+@require_POST
 def delete_ideathon(request, pk):
     IdeathonRegistration.objects.filter(id=pk).delete()
     return JsonResponse({"status": "ok"})
 
 
-@csrf_exempt
+@staff_member_required
+@require_POST
 def delete_multiple_ideathon(request):
     data = json.loads(request.body)
     IdeathonRegistration.objects.filter(id__in=data["ids"]).delete()
@@ -415,18 +441,21 @@ import json
 from .models import MasterClassRegistration
 
 
+@staff_member_required
 def masterclass_list(request):
     registrations = MasterClassRegistration.objects.all().order_by("-id")
     return render(request, "masterclass_list.html", {"registrations": registrations})
 
 
-@csrf_exempt
+@staff_member_required
+@require_POST
 def delete_masterclass(request, pk):
     MasterClassRegistration.objects.filter(id=pk).delete()
     return JsonResponse({"status": "ok"})
 
 
-@csrf_exempt
+@staff_member_required
+@require_POST
 def delete_multiple_masterclass(request):
     data = json.loads(request.body)
     MasterClassRegistration.objects.filter(id__in=data["ids"]).delete()
