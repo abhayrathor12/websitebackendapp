@@ -233,3 +233,15 @@ def resend_webinar_emails(request, pk):
     if pending:
         in_background(resend_pending, webinar)
     return JsonResponse({"ok": True, "pending": pending})
+
+
+@staff_member_required
+@require_POST
+def delete_webinar(request, pk):
+    """Removes the webinar from the schedule (e.g. a test one). Its registrants
+    go back to "waiting" and get the link of the next webinar you schedule.
+    The meeting in Zoho itself is not deleted (do that in Zoho if needed)."""
+    webinar = get_object_or_404(Webinar, pk=pk)
+    moved = webinar.invites.update(webinar=None, meeting_email_sent_at=None, zoho_added_at=None)
+    webinar.delete()
+    return JsonResponse({"ok": True, "moved_to_waiting": moved})

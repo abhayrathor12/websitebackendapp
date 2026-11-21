@@ -74,6 +74,8 @@
     .ws-btn-light:hover { background: #e5e7eb; }
     .ws-btn-warn { background: #f59e0b; color: #fff; }
     .ws-btn-warn:hover { background: #d97706; }
+    .ws-btn-danger { background: #dc2626; color: #fff; }
+    .ws-btn-danger:hover { background: #b91c1c; }
     .ws-btn:disabled { opacity: .6; cursor: wait; }
 
     /* Popup */
@@ -315,7 +317,7 @@ function openModal({ tone, icon, title, html, actions, center = true }) {
     (actions || []).forEach(a => {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = `ws-btn ${a.primary ? 'ws-btn-primary' : a.warn ? 'ws-btn-warn' : 'ws-btn-light'}`;
+        b.className = `ws-btn ${a.primary ? 'ws-btn-primary' : a.danger ? 'ws-btn-danger' : a.warn ? 'ws-btn-warn' : 'ws-btn-light'}`;
         b.textContent = a.text;
         b.onclick = a.onClick;
         bar.appendChild(b);
@@ -526,8 +528,41 @@ function showWebinar(id) {
             </dl>
             ${w.is_past ? '<p class="muted" style="margin-top:.75rem">This webinar is over, so it cannot be edited.</p>' : ''}`,
         actions: w.is_past
-            ? [{ text: 'Close', primary: true, onClick: closeModal }]
-            : [{ text: 'Close', onClick: closeModal }, { text: 'Edit', primary: true, onClick: () => openForm({ ...w }, w) }],
+            ? [{ text: 'Delete', danger: true, onClick: () => askDelete(w) },
+               { text: 'Close', primary: true, onClick: closeModal }]
+            : [{ text: 'Delete', danger: true, onClick: () => askDelete(w) },
+               { text: 'Close', onClick: closeModal },
+               { text: 'Edit', primary: true, onClick: () => openForm({ ...w }, w) }],
+    });
+}
+
+// ─── Delete ────────────────────────────────────────────
+function askDelete(w) {
+    openModal({
+        tone: 'error', icon: '🗑',
+        title: 'Delete this webinar?',
+        html: `<p>The webinar on <strong>${esc(niceDate(w.date))}</strong> (${esc(w.topic)}) will be removed from the schedule. This cannot be undone.</p>
+               <p class="muted" style="margin-top:.5rem">Registrants linked to it go back to the waiting list and get the link of the next webinar you schedule.
+               ${w.manual ? '' : 'The meeting in Zoho is not deleted - remove it in Zoho Meeting if you no longer need it.'}</p>`,
+        actions: [
+            { text: 'Cancel', onClick: () => showWebinar(w.id) },
+            { text: 'Yes, delete', danger: true, onClick: async () => {
+                showLoading('Deleting...', 'Please wait.');
+                try {
+                    const data = await post(`${URLS.base}${w.id}/delete/`);
+                    modalLocked = false;
+                    const moved = data.moved_to_waiting;
+                    openModal({
+                        tone: 'success', icon: '✓', title: 'Webinar deleted',
+                        html: moved ? `<p>${moved} registrant${moved > 1 ? 's were' : ' was'} moved to the waiting list.</p>` : '',
+                        actions: [{ text: 'OK', primary: true, onClick: () => location.reload() }],
+                    });
+                } catch (err) {
+                    modalLocked = false;
+                    showError('Could not delete', err.message);
+                }
+            } },
+        ],
     });
 }
 

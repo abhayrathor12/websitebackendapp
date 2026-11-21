@@ -9,4 +9,5 @@ urlpatterns = [
     path("create/", views.create_webinar, name="webinar-schedule-create"),
     path("<int:pk>/update/", views.update_webinar, name="webinar-schedule-update"),
     path("<int:pk>/resend/", views.resend_webinar_emails, name="webinar-schedule-resend"),
+    path("<int:pk>/delete/", views.delete_webinar, name="webinar-schedule-delete"),
 ]

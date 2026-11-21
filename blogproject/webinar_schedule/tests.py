@@ -372,3 +372,36 @@ class ManualLinkTests(TestCase):
         update.assert_not_called()
         w.refresh_from_db()
         self.assertEqual((w.join_link, w.meeting_key), (self.LINK, ""))
+
+
+
+@mock.patch("webinar_schedule.zoho.update_meeting", return_value={})
+class DeleteTests(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_user("admin", "a@x.com", "pw", is_staff=True))
+
+    def test_delete_moves_registrants_to_waiting(self, _update):
+        w = make_webinar(today() + timedelta(days=5))
+        invite = WebinarInvite.objects.create(
+            registration=make_registration(), webinar=w,
+            meeting_email_sent_at=timezone.now(), zoho_added_at=timezone.now(),
+        )
+        res = self.client.post(reverse("webinar-schedule-delete", args=[w.id]))
+        self.assertEqual(res.json(), {"ok": True, "moved_to_waiting": 1})
+        self.assertFalse(Webinar.objects.exists())
+        invite.refresh_from_db()
+        self.assertIsNone(invite.webinar)
+        self.assertIsNone(invite.meeting_email_sent_at)
+        self.assertIsNone(invite.zoho_added_at)
+
+    def test_past_webinar_can_be_deleted(self, _update):
+        w = make_webinar(today() - timedelta(days=3))
+        self.assertEqual(self.client.post(reverse("webinar-schedule-delete", args=[w.id])).status_code, 200)
+        self.assertFalse(Webinar.objects.exists())
+
+    def test_delete_needs_staff_and_post(self, _update):
+        w = make_webinar(today() + timedelta(days=5))
+        self.assertEqual(self.client.get(reverse("webinar-schedule-delete", args=[w.id])).status_code, 405)
+        self.client.logout()
+        self.assertEqual(self.client.post(reverse("webinar-schedule-delete", args=[w.id])).status_code, 302)
+        self.assertTrue(Webinar.objects.exists())
