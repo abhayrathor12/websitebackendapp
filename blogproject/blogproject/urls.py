@@ -28,6 +28,9 @@ from blog.sitemap import sitemap_xml
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('sitemap.xml', sitemap_xml, name='sitemap'),
+    path('api/portal/', include('portal.urls')),
+    path('portal-users/', include('portal.page_urls')),
+    path('webinar-schedule/', include('webinar_schedule.urls')),
     path('api/', include('blog.urls')),
     path('blogpage/', add_blog, name='add_blog'),
     path("", contact_list, name="contact_list"),

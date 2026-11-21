@@ -109,6 +109,11 @@ class MasterClassRegistration(models.Model):
     email = models.EmailField()
     phone = models.CharField(max_length=15)
 
+    # Optional fields from the registration form
+    company_email = models.EmailField(blank=True, default="")
+    pin_code = models.CharField(max_length=6, blank=True, default="")
+    company_name = models.CharField(max_length=255, blank=True, default="")
+
     payment_id = models.CharField(max_length=100, unique=True)
     order_id = models.CharField(max_length=100, blank=True, null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=99.00)  # in rupees

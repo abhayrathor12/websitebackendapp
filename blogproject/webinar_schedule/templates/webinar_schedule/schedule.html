@@ -1,0 +1,547 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .ws { max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f2937; }
+    .ws .page-header { margin-bottom: 1.5rem; }
+    .ws .page-header h1 { font-size: 2rem; font-weight: 600; color: #111827; margin-bottom: .5rem; letter-spacing: -.025em; }
+    .ws .page-header p { color: #6b7280; font-size: .95rem; line-height: 1.5; }
+
+    .ws .grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+    .ws .card { background: #fff; border: 1px solid #e5e7eb; border-radius: .75rem;
+                box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 1.25rem; }
+    .ws .card h2 { font-size: 1.1rem; font-weight: 600; color: #111827; margin-bottom: .75rem; }
+    .ws .muted { color: #6b7280; font-size: .85rem; }
+
+    /* Calendar */
+    .ws .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
+    .ws .cal-head h2 { margin: 0; }
+    .ws .cal-nav { display: flex; gap: .5rem; }
+    .ws .cal-nav button { width: 36px; height: 36px; border-radius: .5rem; border: 1px solid #e5e7eb;
+                          background: #fff; cursor: pointer; font-size: 1.1rem; color: #374151; }
+    .ws .cal-nav button:hover { background: #f3f4f6; }
+    .ws .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+    .ws .cal-dow { text-align: center; font-size: .72rem; font-weight: 600; text-transform: uppercase;
+                   letter-spacing: .05em; color: #9ca3af; padding: .25rem 0; }
+    .ws .cal-day { min-height: 74px; border: 1px solid #e5e7eb; border-radius: .5rem; padding: .4rem;
+                   background: #fff; cursor: pointer; text-align: left; font: inherit; color: #111827;
+                   display: flex; flex-direction: column; gap: .25rem; transition: border-color .15s, background .15s; }
+    .ws .cal-day:hover:not(:disabled) { border-color: #3b82f6; background: #eff6ff; }
+    .ws .cal-day:disabled { cursor: default; background: #f9fafb; color: #c4c8cf; }
+    .ws .cal-day.is-empty { visibility: hidden; }
+    .ws .cal-day.is-today { border-color: #3b82f6; box-shadow: inset 0 0 0 1px #3b82f6; }
+    .ws .cal-day .num { font-weight: 600; font-size: .9rem; }
+    .ws .cal-day.has-webinar { background: #ecfdf5; border-color: #10b981; color: #065f46; }
+    .ws .cal-day.has-webinar:hover { background: #d1fae5; border-color: #059669; }
+    .ws .cal-day.has-webinar.is-past { background: #f3f4f6; border-color: #d1d5db; color: #6b7280; cursor: pointer; }
+    .ws .cal-tag { font-size: .68rem; font-weight: 600; line-height: 1.2; overflow: hidden;
+                   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .ws .legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: .9rem; font-size: .8rem; color: #6b7280; }
+    .ws .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+                               margin-right: .35rem; vertical-align: -1px; }
+    .ws .legend .l-web::before { background: #10b981; }
+    .ws .legend .l-today::before { border: 2px solid #3b82f6; width: 7px; height: 7px; }
+    .ws .legend .l-past::before { background: #e5e7eb; }
+
+    /* Webinar list */
+    .ws .wlist { display: flex; flex-direction: column; gap: .75rem; }
+    .ws .witem { border: 1px solid #e5e7eb; border-radius: .6rem; padding: .9rem 1rem; }
+    .ws .witem.is-next { border-color: #10b981; box-shadow: 0 0 0 1px #10b981; }
+    .ws .witem-top { display: flex; justify-content: space-between; gap: .75rem; align-items: flex-start; }
+    .ws .witem h3 { font-size: .98rem; font-weight: 600; color: #111827; margin-bottom: .2rem; }
+    .ws .witem .when { font-size: .85rem; color: #374151; }
+    .ws .witem-actions { display: flex; gap: .4rem; flex-shrink: 0; }
+    .ws .badge { display: inline-block; padding: .2rem .6rem; border-radius: 999px; font-size: .72rem; font-weight: 600; }
+    .ws .b-next { background: #d1fae5; color: #047857; }
+    .ws .b-past { background: #f3f4f6; color: #6b7280; }
+    .ws .b-warn { background: #fef3c7; color: #92400e; }
+    .ws .witem-meta { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-top: .6rem; font-size: .82rem; color: #4b5563; }
+    .ws details { margin-top: .6rem; font-size: .85rem; }
+    .ws summary { cursor: pointer; color: #2563eb; font-weight: 500; }
+    .ws .reg-table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
+    .ws .reg-table th, .ws .reg-table td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid #f3f4f6; font-size: .8rem; }
+    .ws .reg-table th { color: #6b7280; font-weight: 600; text-transform: uppercase; font-size: .68rem; letter-spacing: .05em; }
+    .ws .ok { color: #047857; font-weight: 600; }
+    .ws .no { color: #b91c1c; font-weight: 600; }
+    .ws .empty { text-align: center; padding: 1.5rem 1rem; color: #9ca3af; }
+    .ws .waiting { margin-top: 1.5rem; border-color: #fcd34d; background: #fffbeb; }
+
+    .ws-btn { padding: .5rem .9rem; border-radius: .5rem; border: none; cursor: pointer; font-size: .85rem;
+              font-weight: 600; font-family: inherit; }
+    .ws-btn-primary { background: #2563eb; color: #fff; }
+    .ws-btn-primary:hover { background: #1d4ed8; }
+    .ws-btn-light { background: #f3f4f6; color: #374151; }
+    .ws-btn-light:hover { background: #e5e7eb; }
+    .ws-btn-warn { background: #f59e0b; color: #fff; }
+    .ws-btn-warn:hover { background: #d97706; }
+    .ws-btn:disabled { opacity: .6; cursor: wait; }
+
+    /* Popup */
+    .ws-modal { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center;
+                padding: 16px; background: rgba(15, 23, 42, .55); }
+    .ws-modal.is-open { display: flex; }
+    .ws-card { width: 100%; max-width: 480px; max-height: calc(100vh - 32px); overflow-y: auto; padding: 1.6rem;
+               border-radius: 1rem; background: #fff; box-shadow: 0 25px 60px rgba(0,0,0,.25);
+               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation: ws-pop .18s ease-out; }
+    @keyframes ws-pop { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .ws-card.center { text-align: center; }
+    .ws-icon { display: inline-grid; place-items: center; width: 56px; height: 56px; margin-bottom: .9rem;
+               border-radius: 50%; font-size: 1.5rem; font-weight: 700; }
+    .ws-icon.info { background: #dbeafe; color: #1d4ed8; }
+    .ws-icon.success { background: #d1fae5; color: #047857; }
+    .ws-icon.error { background: #fee2e2; color: #b91c1c; }
+    .ws-icon.warn { background: #fef3c7; color: #92400e; }
+    .ws-card h3 { margin-bottom: .5rem; font-size: 1.2rem; color: #111827; }
+    .ws-card .text { color: #4b5563; font-size: .93rem; line-height: 1.55; }
+    .ws-card .text p + p { margin-top: .5rem; }
+    .ws-actions { display: flex; gap: .75rem; justify-content: center; margin-top: 1.4rem; }
+    .ws-actions .ws-btn { flex: 1; padding: .7rem 1rem; font-size: .9rem; }
+
+    .ws-form { display: flex; flex-direction: column; gap: .85rem; margin-top: .75rem; text-align: left; }
+    .ws-form label { display: flex; flex-direction: column; gap: .3rem; font-size: .82rem; font-weight: 600; color: #374151; }
+    .ws-form input, .ws-form textarea { padding: .6rem .75rem; border: 1px solid #d1d5db; border-radius: .5rem;
+                                        font: inherit; font-size: .92rem; font-weight: 400; color: #111827; outline: none; }
+    .ws-form input:focus, .ws-form textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+    .ws-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    .ws-form .check { flex-direction: row; align-items: flex-start; gap: .5rem; font-weight: 500; line-height: 1.4; }
+    .ws-form .check input { margin-top: .15rem; }
+    .ws-duration { font-size: .82rem; color: #6b7280; }
+    .ws-summary { margin-top: .75rem; text-align: left; background: #f9fafb; border: 1px solid #e5e7eb;
+                  border-radius: .6rem; padding: .75rem .9rem; font-size: .88rem; line-height: 1.6; }
+    .ws-summary dt { font-weight: 600; color: #6b7280; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
+    .ws-summary dd { margin: 0 0 .45rem; color: #111827; word-break: break-word; }
+    .ws-summary dd:last-child { margin-bottom: 0; }
+    .ws-link { display: flex; gap: .4rem; align-items: center; }
+    .ws-link a { color: #2563eb; word-break: break-all; }
+    .ws-copy { flex-shrink: 0; padding: .25rem .55rem; font-size: .75rem; }
+    .ws-spinner { width: 42px; height: 42px; margin: .5rem auto 1rem; border: 4px solid #e5e7eb; border-top-color: #2563eb;
+                  border-radius: 50%; animation: ws-spin .8s linear infinite; }
+    @keyframes ws-spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 1024px) { .ws .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) {
+        .ws { padding: 1rem; }
+        .ws .cal { gap: 3px; }
+        .ws .cal-day { min-height: 48px; padding: .25rem; }
+        .ws .cal-tag { display: none; }
+        .ws-form .row { grid-template-columns: 1fr; }
+        .ws .witem-top { flex-direction: column; }
+    }
+</style>
+
+<div class="ws">
+    <div class="page-header">
+        <h1>Webinar Schedule</h1>
+        <p>Click a date to schedule a Masterclass webinar. A Zoho meeting is created once and its link is saved.
+           Every new registrant automatically gets the link of the next webinar (registering on the webinar day gives that day's link),
+           plus the Master Portal link.</p>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="cal-head">
+                <h2 id="calTitle"></h2>
+                <div class="cal-nav">
+                    <button type="button" onclick="moveMonth(-1)" aria-label="Previous month">‹</button>
+                    <button type="button" onclick="moveMonth(1)" aria-label="Next month">›</button>
+                </div>
+            </div>
+            <div class="cal" id="cal"></div>
+            <div class="legend">
+                <span class="l-web">Webinar scheduled</span>
+                <span class="l-today">Today</span>
+                <span class="l-past">Past date</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Scheduled Webinars</h2>
+            <div class="wlist">
+                {% for w in webinars %}
+                <div class="witem" data-date="{{ w.date|date:'Y-m-d' }}">
+                    <div class="witem-top">
+                        <div>
+                            <h3>{{ w.topic }}</h3>
+                            <div class="when">{{ w.when_text }}</div>
+                        </div>
+                        <div class="witem-actions">
+                            <button class="ws-btn ws-btn-light" onclick="showWebinar({{ w.id }})">View</button>
+                        </div>
+                    </div>
+                    <div class="witem-meta">
+                        <span class="status-badge"></span>
+                        {% if show_registrants %}
+                        <span>{{ w.registrants }} registrant{{ w.registrants|pluralize }}</span>
+                        {% endif %}
+                        {% if w.not_sent %}
+                        <span class="badge b-warn">{{ w.not_sent }} registrant{{ w.not_sent|pluralize }} pending (mail or Zoho invite)</span>
+                        <button class="ws-btn ws-btn-warn" style="padding:.3rem .65rem;font-size:.75rem"
+                                onclick="askResend({{ w.id }}, {{ w.not_sent }})">Resend</button>
+                        {% endif %}
+                    </div>
+                    {% if show_registrants and w.registrants %}
+                    <details>
+                        <summary>Show registrants</summary>
+                        <table class="reg-table">
+                            <thead><tr><th>Name</th><th>Email</th><th>Link mail</th><th>Portal mail</th></tr></thead>
+                            <tbody>
+                            {% for inv in w.invites.all %}
+                                <tr>
+                                    <td>{{ inv.registration.name }}</td>
+                                    <td>{{ inv.registration.email }}</td>
+                                    <td>{% if inv.meeting_email_sent_at %}<span class="ok">Sent</span>{% else %}<span class="no">Not sent</span>{% endif %}</td>
+                                    <td>{% if inv.portal_email_sent_at %}<span class="ok">Sent</span>{% else %}<span class="no">Not sent</span>{% endif %}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </details>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="empty">No webinars yet. Click a date in the calendar to schedule one.</div>
+                {% endfor %}
+            </div>
+
+            {% if waiting %}
+            <div class="card waiting">
+                <h2>Waiting for a webinar ({{ waiting|length }})</h2>
+                <p class="muted">These people paid when no upcoming webinar was scheduled. They get the meeting link automatically as soon as you schedule the next webinar.</p>
+                <table class="reg-table">
+                    <thead><tr><th>Name</th><th>Email</th><th>Registered</th></tr></thead>
+                    <tbody>
+                    {% for inv in waiting %}
+                        <tr>
+                            <td>{{ inv.registration.name }}</td>
+                            <td>{{ inv.registration.email }}</td>
+                            <td>{{ inv.registration.created_at|date:"M d, Y" }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="ws-modal" id="wsModal" role="dialog" aria-modal="true" aria-labelledby="wsTitle">
+    <div class="ws-card" id="wsCard"></div>
+</div>
+
+{{ webinars_json|json_script:"webinars-data" }}
+{{ defaults|json_script:"defaults-data" }}
+<script>
+const WEBINARS = JSON.parse(document.getElementById('webinars-data').textContent);
+const DEFAULTS = JSON.parse(document.getElementById('defaults-data').textContent);
+const TODAY = "{{ today }}";
+const CSRF = "{{ csrf_token }}";
+const URLS = {
+    create: "{% url 'webinar-schedule-create' %}",
+    base: "{% url 'webinar-schedule' %}",
+};
+const byDate = Object.fromEntries(WEBINARS.map(w => [w.date, w]));
+const byId = Object.fromEntries(WEBINARS.map(w => [w.id, w]));
+const nextWebinar = WEBINARS.find(w => w.date >= TODAY);
+
+// ─── Helpers ───────────────────────────────────────────
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const niceDate = s => parseISO(s).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+function niceTime(t) {
+    const [h, m] = t.split(':').map(Number);
+    return `${pad(((h + 11) % 12) + 1)}:${pad(m)} ${h < 12 ? 'AM' : 'PM'}`;
+}
+function minutes(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
+function durationText(start, end) {
+    const mins = minutes(end) - minutes(start);
+    if (!(mins > 0)) return '';
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return [h ? `${h} hour${h > 1 ? 's' : ''}` : '', m ? `${m} min` : ''].filter(Boolean).join(' ');
+}
+
+// ─── Status badges in the list ─────────────────────────
+document.querySelectorAll('.witem').forEach(el => {
+    const d = el.dataset.date, badge = el.querySelector('.status-badge');
+    if (d < TODAY) { badge.className = 'badge b-past'; badge.textContent = 'Completed'; }
+    else if (nextWebinar && d === nextWebinar.date) {
+        el.classList.add('is-next');
+        badge.className = 'badge b-next'; badge.textContent = 'Next webinar - new registrants get this link';
+    } else { badge.className = 'badge b-past'; badge.textContent = 'Upcoming'; }
+});
+
+// ─── Calendar ──────────────────────────────────────────
+let view = parseISO(nextWebinar ? nextWebinar.date : TODAY);
+view = new Date(view.getFullYear(), view.getMonth(), 1);
+
+function moveMonth(step) { view = new Date(view.getFullYear(), view.getMonth() + step, 1); renderCalendar(); }
+
+function renderCalendar() {
+    document.getElementById('calTitle').textContent =
+        view.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const cal = document.getElementById('cal');
+    cal.innerHTML = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="cal-dow">${d}</div>`).join('');
+    const first = view.getDay();
+    const days = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+    for (let i = 0; i < first; i++) cal.insertAdjacentHTML('beforeend', '<button class="cal-day is-empty" disabled></button>');
+    for (let d = 1; d <= days; d++) {
+        const key = iso(new Date(view.getFullYear(), view.getMonth(), d));
+        const w = byDate[key], past = key < TODAY;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cal-day' + (key === TODAY ? ' is-today' : '') + (w ? ' has-webinar' : '') + (past ? ' is-past' : '');
+        btn.innerHTML = `<span class="num">${d}</span>` + (w ? `<span class="cal-tag">${esc(niceTime(w.start_time))} · ${esc(w.topic)}</span>` : '');
+        if (w) btn.onclick = () => showWebinar(w.id);
+        else if (past) btn.disabled = true;
+        else btn.onclick = () => askSchedule(key);
+        cal.appendChild(btn);
+    }
+}
+
+// ─── Popup ─────────────────────────────────────────────
+const modal = document.getElementById('wsModal');
+const card = document.getElementById('wsCard');
+let modalLocked = false;
+
+function openModal({ tone, icon, title, html, actions, center = true }) {
+    card.className = 'ws-card' + (center ? ' center' : '');
+    card.innerHTML =
+        (icon ? `<div class="ws-icon ${tone}">${icon}</div>` : '') +
+        `<h3 id="wsTitle">${esc(title)}</h3><div class="text">${html || ''}</div>` +
+        (actions && actions.length ? '<div class="ws-actions"></div>' : '');
+    const bar = card.querySelector('.ws-actions');
+    (actions || []).forEach(a => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `ws-btn ${a.primary ? 'ws-btn-primary' : a.warn ? 'ws-btn-warn' : 'ws-btn-light'}`;
+        b.textContent = a.text;
+        b.onclick = a.onClick;
+        bar.appendChild(b);
+    });
+    modalLocked = false;
+    modal.classList.add('is-open');
+    const focus = card.querySelector('[data-autofocus]') || card.querySelector('.ws-btn-primary') || card.querySelector('button');
+    if (focus) focus.focus();
+}
+function closeModal() { if (!modalLocked) modal.classList.remove('is-open'); }
+function showLoading(title, text) {
+    openModal({ title, html: `<p>${esc(text)}</p>` });
+    card.insertAdjacentHTML('afterbegin', '<div class="ws-spinner"></div>');
+    modalLocked = true;
+}
+function showError(title, message, back) {
+    openModal({
+        tone: 'error', icon: '!', title, html: `<p>${esc(message)}</p>`,
+        actions: back ? [{ text: 'Close', onClick: closeModal }, { text: 'Back to form', primary: true, onClick: back }]
+                      : [{ text: 'OK', primary: true, onClick: closeModal }],
+    });
+}
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ─── Step 1: Yes / No ──────────────────────────────────
+function askSchedule(date) {
+    openModal({
+        tone: 'info', icon: '📅', title: 'Schedule a webinar?',
+        html: `<p>Do you want to schedule a Masterclass webinar on <strong>${esc(niceDate(date))}</strong>?</p>`,
+        actions: [
+            { text: 'No', onClick: closeModal },
+            { text: 'Yes', primary: true, onClick: () => openForm({ ...DEFAULTS, date }) },
+        ],
+    });
+}
+
+// ─── Step 2: details form (create + edit) ──────────────
+function openForm(values, webinar) {
+    const editing = Boolean(webinar);
+    openModal({
+        center: false,
+        title: editing ? 'Edit webinar' : `Webinar on ${niceDate(values.date)}`,
+        html: `
+        <form class="ws-form" id="wsForm" novalidate>
+            ${editing ? `<label>Date<input type="date" name="date" min="${TODAY}" value="${esc(values.date)}"></label>`
+                      : `<input type="hidden" name="date" value="${esc(values.date)}">`}
+            <label>Meeting topic<input type="text" name="topic" maxlength="255" value="${esc(values.topic)}" data-autofocus></label>
+            <label>Agenda<textarea name="agenda" rows="3">${esc(values.agenda)}</textarea></label>
+            <div class="row">
+                <label>Start time (IST)<input type="time" name="start_time" value="${esc(values.start_time)}"></label>
+                <label>End time (IST)<input type="time" name="end_time" value="${esc(values.end_time)}"></label>
+            </div>
+            <div class="ws-duration" id="wsDuration"></div>
+            ${editing ? `<label class="check"><input type="checkbox" name="notify" ${values.notify === false ? '' : 'checked'}>
+                Email the new date/time to registrants who already got this link (only if the date or time changes)</label>` : ''}
+        </form>`,
+        actions: [
+            { text: 'Cancel', onClick: closeModal },
+            { text: editing ? 'Save changes' : 'Create meeting', primary: true, onClick: () => reviewForm(webinar) },
+        ],
+    });
+    const form = document.getElementById('wsForm');
+    const updateDuration = () => {
+        const t = durationText(form.start_time.value || '0:0', form.end_time.value || '0:0');
+        document.getElementById('wsDuration').textContent = t ? `Duration: ${t}` : 'The end time must be after the start time.';
+    };
+    form.addEventListener('input', updateDuration);
+    form.addEventListener('submit', e => { e.preventDefault(); reviewForm(webinar); });
+    updateDuration();
+}
+
+function readForm() {
+    const f = document.getElementById('wsForm');
+    return {
+        date: f.date.value,
+        topic: f.topic.value.trim(),
+        agenda: f.agenda.value.trim(),
+        start_time: f.start_time.value,
+        end_time: f.end_time.value,
+        notify: f.notify ? f.notify.checked : false,
+    };
+}
+
+function formProblem(v) {
+    if (!v.date) return 'Please select the date.';
+    if (v.date < TODAY) return 'You cannot schedule a webinar on a past date.';
+    if (!v.topic) return 'Please enter the meeting topic.';
+    if (!v.start_time || !v.end_time) return 'Please select the start and end time.';
+    if (minutes(v.end_time) <= minutes(v.start_time)) return 'The end time must be after the start time.';
+    return null;
+}
+
+// ─── Step 3: confirm (Yes) ─────────────────────────────
+function reviewForm(webinar) {
+    const v = readForm();
+    const back = () => openForm(v, webinar);
+    const problem = formProblem(v);
+    if (problem) return showError('Please check the details', problem, back);
+    const editing = Boolean(webinar);
+    openModal({
+        tone: 'warn', icon: '?',
+        title: editing ? 'Save these changes?' : 'Create the Zoho meeting?',
+        html: `
+            <p>${editing ? 'The Zoho meeting will be updated with these details.'
+                         : 'A Zoho meeting will be created with these details. The link is created only once and saved.'}</p>
+            <dl class="ws-summary">
+                <dt>Topic</dt><dd>${esc(v.topic)}</dd>
+                ${v.agenda ? `<dt>Agenda</dt><dd>${esc(v.agenda)}</dd>` : ''}
+                <dt>Date</dt><dd>${esc(niceDate(v.date))}</dd>
+                <dt>Time</dt><dd>${esc(niceTime(v.start_time))} - ${esc(niceTime(v.end_time))} (IST) · ${esc(durationText(v.start_time, v.end_time))}</dd>
+            </dl>`,
+        actions: [
+            { text: 'Back', onClick: back },
+            { text: editing ? 'Yes, save' : 'Yes, create', primary: true, onClick: () => save(v, webinar) },
+        ],
+    });
+}
+
+// ─── Step 4: save ──────────────────────────────────────
+async function post(url, body) {
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(body || {}),
+    });
+    let data = null;
+    try { data = await res.json(); } catch (e) { /* not JSON */ }
+    if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'Something went wrong. Please try again.');
+    return data;
+}
+
+async function save(v, webinar) {
+    const editing = Boolean(webinar);
+    showLoading(editing ? 'Saving changes...' : 'Creating meeting...', 'Talking to Zoho Meeting, please wait.');
+    try {
+        const data = editing ? await post(`${URLS.base}${webinar.id}/update/`, v) : await post(URLS.create, v);
+        const w = data.webinar;
+        let extra = '';
+        if (!editing && data.waiting_sent)
+            extra = `<p><strong>${data.waiting_sent}</strong> registrant${data.waiting_sent > 1 ? 's' : ''} who were waiting will get this link by email now.</p>`;
+        if (editing && data.notified)
+            extra = `<p>The new date/time is being emailed to <strong>${data.notified}</strong> registrant${data.notified > 1 ? 's' : ''}.</p>`;
+        modalLocked = false;
+        openModal({
+            tone: 'success', icon: '✓',
+            title: editing ? 'Webinar updated' : 'Meeting created',
+            html: `<p>${esc(w.when)}</p>
+                   <dl class="ws-summary"><dt>Join link (sent to registrants)</dt>
+                   <dd>${linkRow(w.join_link)}</dd></dl>${extra}`,
+            actions: [{ text: 'OK', primary: true, onClick: () => location.reload() }],
+        });
+    } catch (err) {
+        modalLocked = false;
+        showError(editing ? 'Could not save the changes' : 'Could not create the meeting', err.message, () => openForm(v, webinar));
+    }
+}
+
+// ─── View webinar ──────────────────────────────────────
+function linkRow(url) {
+    return `<span class="ws-link"><a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>
+            <button type="button" class="ws-btn ws-btn-light ws-copy" data-url="${esc(url)}" onclick="copyLink(this)">Copy</button></span>`;
+}
+function copyLink(btn) {
+    const done = () => { btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy', 1500); };
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(btn.dataset.url).then(done);
+        return;
+    }
+    // http:// (local network) has no clipboard API
+    const t = document.createElement('textarea');
+    t.value = btn.dataset.url;
+    document.body.appendChild(t);
+    t.select();
+    document.execCommand('copy');
+    t.remove();
+    done();
+}
+
+function showWebinar(id) {
+    const w = byId[id];
+    openModal({
+        center: false,
+        title: w.topic,
+        html: `
+            <dl class="ws-summary">
+                <dt>Date & time</dt><dd>${esc(w.when)}</dd>
+                ${w.agenda ? `<dt>Agenda</dt><dd>${esc(w.agenda)}</dd>` : ''}
+                <dt>Join link (for registrants)</dt><dd>${linkRow(w.join_link)}</dd>
+                ${w.start_link ? `<dt>Start link (host only - do not share)</dt><dd>${linkRow(w.start_link)}</dd>` : ''}
+            </dl>
+            ${w.is_past ? '<p class="muted" style="margin-top:.75rem">This webinar is over, so it cannot be edited.</p>' : ''}`,
+        actions: w.is_past
+            ? [{ text: 'Close', primary: true, onClick: closeModal }]
+            : [{ text: 'Close', onClick: closeModal }, { text: 'Edit', primary: true, onClick: () => openForm({ ...w }, w) }],
+    });
+}
+
+// ─── Resend failed mails ───────────────────────────────
+function askResend(id, count) {
+    const w = byId[id];
+    openModal({
+        tone: 'warn', icon: '✉',
+        title: 'Resend the emails?',
+        html: `<p>${count} registrant${count > 1 ? 's' : ''} of <strong>${esc(niceDate(w.date))}</strong> did not get the meeting link email or were not added to the Zoho meeting (calendar invite). Try again now?</p>`,
+        actions: [
+            { text: 'Cancel', onClick: closeModal },
+            { text: 'Yes, resend', primary: true, onClick: async () => {
+                showLoading('Sending...', 'Please wait.');
+                try {
+                    await post(`${URLS.base}${id}/resend/`);
+                    modalLocked = false;
+                    openModal({
+                        tone: 'success', icon: '✓', title: 'Emails are being sent',
+                        html: '<p>Refresh this page in a minute to see the updated status.</p>',
+                        actions: [{ text: 'OK', primary: true, onClick: () => location.reload() }],
+                    });
+                } catch (err) {
+                    modalLocked = false;
+                    showError('Could not resend', err.message);
+                }
+            } },
+        ],
+    });
+}
+
+renderCalendar();
+</script>
+{% endblock %}

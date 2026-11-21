@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .portal-users {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .portal-users .page-header { margin-bottom: 2rem; }
+    .portal-users .page-header h1 {
+        font-size: 2rem; font-weight: 600; color: #111827;
+        margin-bottom: 0.5rem; letter-spacing: -0.025em;
+    }
+    .portal-users .page-header p { color: #6b7280; font-size: 0.95rem; line-height: 1.5; }
+    .portal-users .stats-row { display: flex; gap: 2rem; margin-top: 1rem; flex-wrap: wrap; }
+    .portal-users .stat-item { font-size: 0.9rem; color: #374151; }
+    .portal-users .stat-item strong { color: #111827; font-weight: 600; }
+
+    .portal-users .search-box { position: relative; max-width: 400px; margin-bottom: 1.5rem; }
+    .portal-users .search-icon {
+        position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+        color: #9ca3af; pointer-events: none;
+    }
+    .portal-users .search-input {
+        width: 100%; padding: 0.75rem 1rem 0.75rem 2.75rem;
+        border: 1px solid #e5e7eb; border-radius: 0.5rem; font-size: 0.95rem; outline: none;
+    }
+    .portal-users .search-input:focus {
+        border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .portal-users .table-container {
+        background: white; border-radius: 0.75rem; overflow-x: auto;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb;
+    }
+    .portal-users table { width: 100%; border-collapse: collapse; }
+    .portal-users th, .portal-users td {
+        padding: 1rem 0.75rem; text-align: left; font-size: 0.9rem; white-space: nowrap;
+    }
+    .portal-users thead { background: #f9fafb; border-bottom: 2px solid #e5e7eb; }
+    .portal-users th {
+        font-weight: 600; color: #374151; text-transform: uppercase;
+        font-size: 0.75rem; letter-spacing: 0.05em;
+    }
+    .portal-users tbody tr { border-bottom: 1px solid #f3f4f6; }
+    .portal-users tbody tr:hover { background-color: #f9fafb; }
+    .portal-users td { color: #1f2937; }
+    .portal-users .center { text-align: center; }
+
+    .portal-users .badge {
+        display: inline-block; padding: 0.25rem 0.65rem; border-radius: 999px;
+        font-size: 0.75rem; font-weight: 600;
+    }
+    .portal-users .badge-active { background: #d1fae5; color: #047857; }
+    .portal-users .badge-inactive { background: #fee2e2; color: #b91c1c; }
+    .portal-users .badge-yes { background: #dbeafe; color: #1d4ed8; }
+    .portal-users .badge-no { background: #f3f4f6; color: #6b7280; }
+
+    .portal-users .toggle-btn {
+        padding: 0.5rem 1rem; border-radius: 0.5rem; border: none; cursor: pointer;
+        font-size: 0.85rem; font-weight: 600; color: white; min-width: 110px;
+        transition: background-color 0.2s;
+    }
+    .portal-users .toggle-btn.activate { background: #10b981; }
+    .portal-users .toggle-btn.activate:hover { background: #059669; }
+    .portal-users .toggle-btn.deactivate { background: #ef4444; }
+    .portal-users .toggle-btn.deactivate:hover { background: #dc2626; }
+    .portal-users .toggle-btn:disabled { opacity: 0.6; cursor: wait; }
+
+    /* Certificate access on/off switch */
+    .portal-users .cert-switch {
+        display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem;
+        border: none; background: none; cursor: pointer; font: inherit;
+    }
+    .portal-users .cert-switch-track {
+        position: relative; width: 42px; height: 24px; border-radius: 999px;
+        background: #d1d5db; transition: background-color 0.2s;
+    }
+    .portal-users .cert-switch-thumb {
+        position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
+        background: white; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.2s;
+    }
+    .portal-users .cert-switch.is-on .cert-switch-track { background: #10b981; }
+    .portal-users .cert-switch.is-on .cert-switch-thumb { transform: translateX(18px); }
+    .portal-users .cert-switch-label { font-size: 0.8rem; font-weight: 600; color: #6b7280; min-width: 62px; text-align: left; }
+    .portal-users .cert-switch.is-on .cert-switch-label { color: #047857; }
+    .portal-users .cert-switch:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 999px; }
+
+    .portal-users .empty-state {
+        text-align: center; padding: 3rem 2rem; color: #9ca3af; white-space: normal;
+    }
+
+    /* Popup */
+    .pu-modal {
+        position: fixed; inset: 0; z-index: 1000; display: none;
+        align-items: center; justify-content: center; padding: 16px;
+        background: rgba(15, 23, 42, 0.55);
+    }
+    .pu-modal.is-open { display: flex; }
+    .pu-modal-card {
+        width: 100%; max-width: 420px; padding: 1.75rem; border-radius: 1rem;
+        background: white; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25); text-align: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        animation: pu-pop 0.18s ease-out;
+    }
+    @keyframes pu-pop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .pu-modal-icon {
+        display: inline-grid; place-items: center; width: 56px; height: 56px;
+        margin-bottom: 1rem; border-radius: 50%; font-size: 1.6rem; font-weight: 700;
+    }
+    .pu-modal-icon.activate { background: #d1fae5; color: #047857; }
+    .pu-modal-icon.deactivate, .pu-modal-icon.error { background: #fee2e2; color: #b91c1c; }
+    .pu-modal-card h3 { margin-bottom: 0.5rem; font-size: 1.2rem; color: #111827; }
+    .pu-modal-card p { margin-bottom: 1.5rem; color: #4b5563; font-size: 0.95rem; line-height: 1.5; }
+    .pu-modal-actions { display: flex; gap: 0.75rem; justify-content: center; }
+    .pu-modal-actions button {
+        flex: 1; padding: 0.7rem 1rem; border-radius: 0.5rem; border: none;
+        font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    }
+    .pu-btn-cancel { background: #f3f4f6; color: #374151; }
+    .pu-btn-cancel:hover { background: #e5e7eb; }
+    .pu-btn-ok.activate { background: #10b981; color: white; }
+    .pu-btn-ok.deactivate, .pu-btn-ok.error { background: #ef4444; color: white; }
+    .pu-btn-ok:disabled { opacity: 0.6; cursor: wait; }
+
+    @media (max-width: 768px) {
+        .portal-users { padding: 1rem; }
+        .portal-users .search-box { max-width: 100%; }
+        .portal-users th, .portal-users td { padding: 0.75rem 0.5rem; font-size: 0.85rem; }
+    }
+</style>
+
+<div class="portal-users">
+    <div class="page-header">
+        <h1>Master Portal Users</h1>
+        <p>Portal accounts are created automatically when someone pays for the Masterclass, and their login is emailed to them. Accounts are active straight away — use Deactivate / Activate to block or allow access.</p>
+        <div class="stats-row">
+            <div class="stat-item">Total Users: <strong>{{ profiles|length }}</strong></div>
+        </div>
+    </div>
+
+    <div class="search-box">
+        <svg class="search-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M17.5 17.5L13.875 13.875M15.8333 9.16667C15.8333 12.8486 12.8486 15.8333 9.16667 15.8333C5.48477 15.8333 2.5 12.8486 2.5 9.16667C2.5 5.48477 5.48477 2.5 9.16667 2.5C12.8486 2.5 15.8333 5.48477 15.8333 9.16667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <input type="text" class="search-input" id="searchInput"
+               placeholder="Search by name or email..." onkeyup="filterTable()">
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 60px;">No.</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Registered On</th>
+                    <th class="center">Evaluations</th>
+                    <th class="center">Certificate</th>
+                    <th class="center">LinkedIn PDF</th>
+                    <th class="center">Certificate Access</th>
+                    <th class="center">Status</th>
+                    <th class="center">Action</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                {% for p in profiles %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><strong>{{ p.full_name }}</strong></td>
+                    <td>{{ p.user.email }}</td>
+                    <td>{{ p.created_at|date:"M d, Y H:i" }}</td>
+                    <td class="center">{{ p.completed }} / {{ total_evaluations }}</td>
+                    <td class="center">
+                        {% if p.certificate_downloaded %}<span class="badge badge-yes">Downloaded</span>
+                        {% else %}<span class="badge badge-no">—</span>{% endif %}
+                    </td>
+                    <td class="center">
+                        {% if p.linkedin_downloaded %}<span class="badge badge-yes">Downloaded</span>
+                        {% else %}<span class="badge badge-no">—</span>{% endif %}
+                    </td>
+                    <td class="center">
+                        <button type="button" class="cert-switch{% if p.certificate_enabled %} is-on{% endif %}"
+                                role="switch" aria-checked="{% if p.certificate_enabled %}true{% else %}false{% endif %}"
+                                data-name="{{ p.full_name }}"
+                                title="{% if p.certificate_enabled %}Certificate activated — click to deactivate{% else %}Certificate not activated — click to activate{% endif %}"
+                                onclick="askCertToggle(this, {{ p.id }}, {% if p.certificate_enabled %}false{% else %}true{% endif %})">
+                            <span class="cert-switch-track"><span class="cert-switch-thumb"></span></span>
+                            <span class="cert-switch-label">{% if p.certificate_enabled %}Activated{% else %}Off{% endif %}</span>
+                        </button>
+                    </td>
+                    <td class="center">
+                        {% if p.user.is_active %}<span class="badge badge-active">Active</span>
+                        {% else %}<span class="badge badge-inactive">Deactivated</span>{% endif %}
+                    </td>
+                    <td class="center">
+                        {% if p.user.is_active %}
+                        <button class="toggle-btn deactivate" data-name="{{ p.full_name }}" onclick="askToggle(this, {{ p.id }}, false)">Deactivate</button>
+                        {% else %}
+                        <button class="toggle-btn activate" data-name="{{ p.full_name }}" onclick="askToggle(this, {{ p.id }}, true)">Activate</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="empty-state">
+                        <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">No portal users yet</div>
+                        <div style="font-size: 0.9rem;">Participants appear here after they pay for the Masterclass</div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="pu-modal" id="puModal" role="dialog" aria-modal="true" aria-labelledby="puTitle">
+    <div class="pu-modal-card">
+        <div class="pu-modal-icon" id="puIcon"></div>
+        <h3 id="puTitle"></h3>
+        <p id="puText"></p>
+        <div class="pu-modal-actions">
+            <button type="button" class="pu-btn-cancel" id="puCancel" onclick="closeModal()">Cancel</button>
+            <button type="button" class="pu-btn-ok" id="puOk"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('#tableBody tr').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+
+const modal = document.getElementById('puModal');
+const okBtn = document.getElementById('puOk');
+const cancelBtn = document.getElementById('puCancel');
+
+function openModal({ tone, icon, title, text, okText, showCancel, onOk }) {
+    const iconEl = document.getElementById('puIcon');
+    iconEl.className = `pu-modal-icon ${tone}`;
+    iconEl.textContent = icon;
+    document.getElementById('puTitle').textContent = title;
+    document.getElementById('puText').textContent = text;
+    okBtn.className = `pu-btn-ok ${tone}`;
+    okBtn.textContent = okText;
+    okBtn.disabled = false;
+    okBtn.onclick = onOk;
+    cancelBtn.style.display = showCancel ? '' : 'none';
+    modal.classList.add('is-open');
+    okBtn.focus();
+}
+
+function closeModal() {
+    modal.classList.remove('is-open');
+}
+
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function askToggle(btn, id, active) {
+    const name = btn.dataset.name;
+    openModal({
+        tone: active ? 'activate' : 'deactivate',
+        icon: active ? '✓' : '!',
+        title: active ? `Activate ${name}?` : `Deactivate ${name}?`,
+        text: active
+            ? 'They will be able to log in to the portal. If they already downloaded their certificate, they can download it again.'
+            : 'They will be logged out right away and cannot log in until you activate them again.',
+        okText: active ? 'Activate' : 'Deactivate',
+        showCancel: true,
+        onOk: () => toggleUser(id, active),
+    });
+}
+
+function askCertToggle(btn, id, enabled) {
+    const name = btn.dataset.name;
+    openModal({
+        tone: enabled ? 'activate' : 'deactivate',
+        icon: enabled ? '✓' : '!',
+        title: enabled ? `Activate certificate for ${name}?` : `Deactivate certificate for ${name}?`,
+        text: enabled
+            ? 'Once all evaluations are completed, they can download the certificate and the LinkedIn guide.'
+            : 'They will not be able to download the certificate or the LinkedIn guide until you activate it again.',
+        okText: enabled ? 'Activate' : 'Deactivate',
+        showCancel: true,
+        onOk: () => postToggle(`{% url 'portal-users' %}certificate/${id}/`, { enabled }),
+    });
+}
+
+function toggleUser(id, active) {
+    postToggle(`{% url 'portal-users' %}toggle/${id}/`, { active });
+}
+
+function postToggle(url, body) {
+    okBtn.disabled = true;
+    okBtn.textContent = 'Please wait...';
+    fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
+        body: JSON.stringify(body)
+    })
+        .then(res => {
+            if (!res.ok) throw new Error();
+            location.reload();
+        })
+        .catch(() => {
+            openModal({
+                tone: 'error',
+                icon: '!',
+                title: 'Could not update the user',
+                text: 'Something went wrong. Please try again.',
+                okText: 'OK',
+                showCancel: false,
+                onOk: closeModal,
+            });
+        });
+}
+</script>
+{% endblock %}

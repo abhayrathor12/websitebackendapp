@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<!-- Tell mail apps this email has its own dark design -->
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>{% block title %}Technoviz Automation{% endblock %}</title>
+<style>
+  :root { color-scheme: light dark; supported-color-schemes: light dark; }
+
+  @media only screen and (max-width: 620px) {
+    .container { width: 100% !important; }
+    .px { padding-left: 22px !important; padding-right: 22px !important; }
+    .hero-title { font-size: 26px !important; line-height: 34px !important; }
+    .detail-label, .detail-value { display: block !important; width: 100% !important; padding: 2px 0 !important; }
+    .detail-value { padding-bottom: 12px !important; text-align: left !important; }
+    .badge { font-size: 12px !important; padding: 9px 14px !important; }
+    .btn a { display: block !important; }
+  }
+
+  /* ---------- Dark mode (Apple Mail, iOS Mail, Outlook app, Samsung Mail...) ---------- */
+  @media (prefers-color-scheme: dark) {
+    .page-bg  { background-color: #0b1324 !important; }
+    .card     { background-color: #121d36 !important; box-shadow: none !important; }
+    .text     { color: #d5ddef !important; }
+    .muted    { color: #9fb0d1 !important; }
+    .heading  { color: #ffffff !important; }
+    .accent   { color: #f4b531 !important; }
+    .details  { background-color: #182648 !important; border-color: #2a3a66 !important; }
+    .row      { border-color: #2a3a66 !important; }
+    .value    { color: #ffffff !important; }
+    .note     { background-color: #2b2412 !important; }
+    .note-text{ color: #f3d68a !important; }
+    .info     { background-color: #13284d !important; }
+    .info-text{ color: #c9d8f5 !important; }
+    .badge    { background-color: #0f3324 !important; border-color: #1f6b47 !important; color: #8ce8b4 !important; }
+    .code     { background-color: #0b1324 !important; color: #ffffff !important; border-color: #2a3a66 !important; }
+  }
+  /* Same for Outlook.com / Outlook apps that use their own attributes */
+  [data-ogsc] .text     { color: #d5ddef !important; }
+  [data-ogsc] .muted    { color: #9fb0d1 !important; }
+  [data-ogsc] .heading  { color: #ffffff !important; }
+  [data-ogsc] .accent   { color: #f4b531 !important; }
+  [data-ogsc] .value    { color: #ffffff !important; }
+  [data-ogsc] .note-text{ color: #f3d68a !important; }
+  [data-ogsc] .info-text{ color: #c9d8f5 !important; }
+  [data-ogsc] .badge    { color: #8ce8b4 !important; }
+  [data-ogsc] .code     { color: #ffffff !important; }
+  [data-ogsb] .page-bg  { background-color: #0b1324 !important; }
+  [data-ogsb] .card     { background-color: #121d36 !important; }
+  [data-ogsb] .details  { background-color: #182648 !important; }
+  [data-ogsb] .note     { background-color: #2b2412 !important; }
+  [data-ogsb] .info     { background-color: #13284d !important; }
+  [data-ogsb] .badge    { background-color: #0f3324 !important; }
+  [data-ogsb] .code     { background-color: #0b1324 !important; }
+</style>
+</head>
+<body class="page-bg" style="margin:0; padding:0; background-color:#eef2f8; -webkit-text-size-adjust:100%;">
+
+<!-- Preview text (shown next to the subject in the inbox) -->
+<div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px;">
+  {% block preview %}{% endblock %}
+</div>
+
+<table role="presentation" class="page-bg" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef2f8" style="background-color:#eef2f8;">
+  <tr>
+    <td align="center" style="padding:28px 12px;">
+
+      <table role="presentation" class="container card" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:600px; max-width:600px; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 6px 24px rgba(31,60,122,0.10);">
+
+        <!-- Gold top strip -->
+        <tr><td bgcolor="#f4b531" style="height:6px; background-color:#f4b531; font-size:0; line-height:0;">&nbsp;</td></tr>
+
+        <!-- Header + hero (navy, same in light and dark mode). Logo has its own white tile. -->
+        <tr>
+          <td class="px" align="center" bgcolor="#1f3c7a" style="padding:30px 44px 46px; background-color:#1f3c7a;">
+            <a href="{{ site_url }}" target="_blank" style="text-decoration:none;">
+              <img src="{{ logo_src }}" width="220" alt="TechnoViz Automation" style="display:block; width:220px; max-width:75%; height:auto; border:0; margin:0 auto 30px;">
+            </a>
+            <p style="margin:0 0 14px; font-family:Arial,Helvetica,sans-serif; font-size:12px; font-weight:bold; letter-spacing:3px; text-transform:uppercase; color:#f4b531;">
+              {% block eyebrow %}{% endblock %}
+            </p>
+            <h1 class="hero-title" style="margin:0 0 14px; font-family:Arial,Helvetica,sans-serif; font-size:31px; line-height:40px; font-weight:bold; color:#ffffff;">
+              {% block hero_title %}{% endblock %}
+            </h1>
+            <p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:16px; line-height:25px; color:#d6e0f5;">
+              {% block hero_text %}{% endblock %}
+            </p>
+          </td>
+        </tr>
+
+        {% block content %}{% endblock %}
+
+        <!-- Sign-off -->
+        <tr>
+          <td class="px" style="padding:0 44px 34px; font-family:Arial,Helvetica,sans-serif; font-size:15px; line-height:24px;">
+            <p class="text" style="margin:0 0 4px; color:#3a4560;">{% block signoff %}See you at the masterclass!{% endblock %}</p>
+            <p class="accent" style="margin:0; font-weight:bold; color:#1f3c7a;">Team Technoviz Automation</p>
+          </td>
+        </tr>
+
+        <!-- Footer (navy in both modes) -->
+        <tr>
+          <td class="px" align="center" bgcolor="#1f3c7a" style="padding:26px 44px; background-color:#1f3c7a; font-family:Arial,Helvetica,sans-serif;">
+            <p style="margin:0 0 8px; font-size:14px; color:#ffffff;">
+              Questions? Write to us at
+              <a href="mailto:{{ support_email }}" style="color:#f4b531; text-decoration:none; font-weight:bold;">{{ support_email }}</a>
+            </p>
+            <p style="margin:0 0 14px; font-size:13px;">
+              <a href="{{ site_url }}" target="_blank" style="color:#d6e0f5; text-decoration:none;">technovizautomation.com</a>
+            </p>
+            <p style="margin:0; font-size:11px; line-height:17px; color:#9fb0d6;">
+              You are receiving this email because you registered for the {{ masterclass_name }}.<br>
+              &copy; {{ year }} Technoviz Automation. All rights reserved.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+</table>
+</body>
+</html>

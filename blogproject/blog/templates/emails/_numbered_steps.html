@@ -1,0 +1,18 @@
+{% comment %}Numbered list of (title, text) pairs from "steps". Used by the masterclass mails.{% endcomment %}
+{% for step in steps %}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">
+              <tr>
+                <td width="44" valign="top">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td align="center" valign="middle" bgcolor="#1f3c7a" width="32" height="32" style="width:32px; height:32px; border-radius:50%; background-color:#1f3c7a; color:#f4b531; font-family:Arial,Helvetica,sans-serif; font-size:15px; font-weight:bold;">{{ forloop.counter }}</td>
+                    </tr>
+                  </table>
+                </td>
+                <td valign="top" style="font-family:Arial,Helvetica,sans-serif;">
+                  <p class="heading" style="margin:4px 0 3px; font-size:15px; font-weight:bold; color:#1b2540;">{{ step.0 }}</p>
+                  <p class="muted" style="margin:0; font-size:14px; line-height:21px; color:#5a6580;">{{ step.1 }}</p>
+                </td>
+              </tr>
+            </table>
+{% endfor %}

@@ -1,0 +1,116 @@
+{% extends "emails/masterclass_base.html" %}
+{% comment %}Mail 2: joining link of the live session (also sent as "Updated" when the schedule changes).{% endcomment %}
+
+{% block title %}Your Masterclass Joining Link{% endblock %}
+{% block preview %}{% if updated %}New schedule: {{ date_text }}, {{ time_text }}. Your joining link is inside.{% else %}{{ date_text }}, {{ time_text }} - your joining link for the live session is inside.{% endif %}{% endblock %}
+{% block eyebrow %}{% if updated %}Schedule Updated{% else %}Your Joining Link{% endif %}{% endblock %}
+{% block hero_title %}{% if updated %}Your session has a new schedule{% else %}You're all set, {{ first_name }}!{% endif %}{% endblock %}
+{% block hero_text %}{% if updated %}Please note the updated date and time below. Your joining link stays the same.{% else %}Here is everything you need to join the <strong style="color:#ffffff;">{{ masterclass_name }}</strong> live session.{% endif %}{% endblock %}
+
+{% block content %}
+        {% if updated %}
+        <!-- Update notice -->
+        <tr>
+          <td class="px" style="padding:28px 44px 0;">
+            <table role="presentation" class="note" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#fff8e6" style="background-color:#fff8e6; border-left:4px solid #f4b531; border-radius:8px;">
+              <tr>
+                <td class="note-text" style="padding:14px 18px; font-family:Arial,Helvetica,sans-serif; font-size:14px; line-height:21px; color:#6a5214;">
+                  <strong>&#128260; Schedule changed.</strong> The details below replace the ones we sent earlier.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        {% endif %}
+
+        <!-- Intro -->
+        <tr>
+          <td class="px text" style="padding:26px 44px 8px; font-family:Arial,Helvetica,sans-serif; font-size:15px; line-height:24px; color:#3a4560;">
+            <p class="text" style="margin:0 0 14px; color:#3a4560;">Hi {{ name }},</p>
+            <p class="text" style="margin:0; color:#3a4560;">
+              {% if updated %}The schedule of your masterclass live session has been updated. Here are the new details.
+              {% else %}Your live session is scheduled. Save this email - you will need the link below to join.{% endif %}
+            </p>
+          </td>
+        </tr>
+
+        <!-- Session details -->
+        <tr>
+          <td class="px" style="padding:22px 44px 8px;">
+            <table role="presentation" class="details" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f6f8fc" style="background-color:#f6f8fc; border:1px solid #e1e7f2; border-radius:12px;">
+              <tr>
+                <td class="accent" style="padding:18px 22px 8px; font-family:Arial,Helvetica,sans-serif; font-size:13px; font-weight:bold; letter-spacing:1.5px; text-transform:uppercase; color:#1f3c7a; border-bottom:2px solid #f4b531;">
+                  Session Details
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:10px 22px 16px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif; font-size:14px; line-height:20px;">
+                    <tr>
+                      <td class="detail-label muted row" width="34%" style="padding:9px 0; color:#6b7590; border-bottom:1px solid #e6ebf4;">&#128218;&nbsp; Topic</td>
+                      <td class="detail-value value row" style="padding:9px 0; color:#1b2540; font-weight:bold; text-align:right; border-bottom:1px solid #e6ebf4;">{{ topic }}</td>
+                    </tr>
+                    <tr>
+                      <td class="detail-label muted row" style="padding:9px 0; color:#6b7590; border-bottom:1px solid #e6ebf4;">&#128197;&nbsp; Date</td>
+                      <td class="detail-value value row" style="padding:9px 0; color:#1b2540; font-weight:bold; text-align:right; border-bottom:1px solid #e6ebf4;">{{ date_text }}</td>
+                    </tr>
+                    <tr>
+                      <td class="detail-label muted {% if agenda %}row{% endif %}" style="padding:9px 0; color:#6b7590; {% if agenda %}border-bottom:1px solid #e6ebf4;{% endif %}">&#9200;&nbsp; Time</td>
+                      <td class="detail-value value {% if agenda %}row{% endif %}" style="padding:9px 0; color:#1b2540; font-weight:bold; text-align:right; {% if agenda %}border-bottom:1px solid #e6ebf4;{% endif %}">{{ time_text }}</td>
+                    </tr>
+                    {% if agenda %}
+                    <tr>
+                      <td class="detail-label muted" valign="top" style="padding:9px 0; color:#6b7590;">&#128221;&nbsp; Agenda</td>
+                      <td class="detail-value value" style="padding:9px 0; color:#1b2540; text-align:right;">{{ agenda|linebreaksbr }}</td>
+                    </tr>
+                    {% endif %}
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Join button -->
+        <tr>
+          <td class="px" align="center" style="padding:26px 44px 6px;">
+            <table role="presentation" class="btn" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" bgcolor="#f4b531" style="border-radius:10px; background-color:#f4b531;">
+                  <a href="{{ join_link }}" target="_blank" style="display:inline-block; padding:15px 38px; font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:bold; color:#1f3c7a; text-decoration:none; border-radius:10px;">
+                    &#9654;&nbsp; Join the Masterclass
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p class="muted" style="margin:14px 0 0; font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:18px; color:#6b7590;">
+              Button not working? Copy this link into your browser:<br>
+              <a href="{{ join_link }}" target="_blank" class="accent" style="color:#1f3c7a; word-break:break-all;">{{ join_link }}</a>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Calendar note -->
+        <tr>
+          <td class="px" style="padding:22px 44px 4px;">
+            <table role="presentation" class="info" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef3fc" style="background-color:#eef3fc; border-left:4px solid #1f3c7a; border-radius:8px;">
+              <tr>
+                <td class="info-text" style="padding:14px 18px; font-family:Arial,Helvetica,sans-serif; font-size:14px; line-height:21px; color:#29406e;">
+                  <strong>&#128197; Calendar:</strong> you will also receive an invitation from
+                  <strong>Zoho Meeting</strong>{% if updated %} with the new time{% endif %}, which adds this session to your calendar.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Before the session -->
+        <tr>
+          <td class="px" style="padding:28px 44px 20px;">
+            <p class="heading" style="margin:0 0 16px; font-family:Arial,Helvetica,sans-serif; font-size:18px; font-weight:bold; color:#1b2540;">
+              Before the session
+            </p>
+            {% include "emails/_numbered_steps.html" %}
+          </td>
+        </tr>
+{% endblock %}

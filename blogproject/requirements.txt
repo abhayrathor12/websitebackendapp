@@ -11,3 +11,4 @@ threaded
 razorpay==2.0.1
 python-dotenv
 sib-api-v3-sdk
+reportlab

@@ -66,5 +66,15 @@ from .models import MasterClassRegistration
 class MasterClassRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = MasterClassRegistration
-        fields = ["id", "name", "email", "phone", "payment_id", "order_id", "amount", "created_at"]
+        fields = [
+            "id", "name", "email", "phone",
+            "company_email", "pin_code", "company_name",  # optional
+            "payment_id", "order_id", "amount", "created_at",
+        ]
         read_only_fields = ["id", "payment_id", "order_id", "amount", "created_at"]
+
+    def validate_pin_code(self, value):
+        value = (value or "").strip()
+        if value and not (value.isdigit() and len(value) == 6):
+            raise serializers.ValidationError("Pin code must be 6 digits.")
+        return value

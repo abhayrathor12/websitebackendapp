@@ -1,0 +1,75 @@
+{% extends "emails/masterclass_base.html" %}
+{% comment %}Mail 1: welcome + registration confirmation.{% endcomment %}
+
+{% block title %}Welcome to the Technoviz Family{% endblock %}
+{% block preview %}Your seat for the {{ masterclass_name }} is confirmed. Welcome aboard, {{ first_name }}!{% endblock %}
+{% block eyebrow %}Registration Confirmed{% endblock %}
+{% block hero_title %}Welcome to the Technoviz Family, {{ first_name }}!{% endblock %}
+{% block hero_text %}Your seat for the <strong style="color:#ffffff;">{{ masterclass_name }}</strong> is booked.
+              We're excited to have you learn with us.{% endblock %}
+
+{% block content %}
+        <!-- Success badge -->
+        <tr>
+          <td align="center" style="padding:28px 24px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td class="badge" bgcolor="#e8f7ef" style="background-color:#e8f7ef; border:1px solid #bfe8d0; border-radius:999px; padding:10px 22px; font-family:Arial,Helvetica,sans-serif; font-size:14px; font-weight:bold; color:#127a46;">
+                  &#10004;&nbsp; Payment successful &middot; Registration confirmed
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Intro -->
+        <tr>
+          <td class="px text" style="padding:26px 44px 8px; font-family:Arial,Helvetica,sans-serif; font-size:15px; line-height:24px; color:#3a4560;">
+            <p class="text" style="margin:0 0 14px; color:#3a4560;">Hi {{ name }},</p>
+            <p class="text" style="margin:0; color:#3a4560;">
+              Thank you for choosing Technoviz Automation. You are now part of a growing community of
+              engineers and professionals shaping the future of smart manufacturing. Here are your
+              registration details for your records.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Registration details -->
+        <tr>
+          <td class="px" style="padding:22px 44px 8px;">
+            <table role="presentation" class="details" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f6f8fc" style="background-color:#f6f8fc; border:1px solid #e1e7f2; border-radius:12px;">
+              <tr>
+                <td class="accent" style="padding:18px 22px 8px; font-family:Arial,Helvetica,sans-serif; font-size:13px; font-weight:bold; letter-spacing:1.5px; text-transform:uppercase; color:#1f3c7a; border-bottom:2px solid #f4b531;">
+                  Registration Details
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:10px 22px 16px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif; font-size:14px; line-height:20px;">
+                    {% for label, value in details %}
+                    <tr>
+                      <td class="detail-label muted row" width="42%" style="padding:9px 0; color:#6b7590; border-bottom:1px solid #e6ebf4;">{{ label }}</td>
+                      <td class="detail-value value row" style="padding:9px 0; color:#1b2540; font-weight:bold; text-align:right; border-bottom:1px solid #e6ebf4; word-break:break-all;">{{ value }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                      <td class="detail-label muted" style="padding:12px 0 2px; color:#6b7590;">Amount Paid</td>
+                      <td class="detail-value accent" style="padding:12px 0 2px; color:#1f3c7a; font-size:18px; font-weight:bold; text-align:right;">&#8377;{{ amount }}</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- What happens next -->
+        <tr>
+          <td class="px" style="padding:30px 44px 20px;">
+            <p class="heading" style="margin:0 0 16px; font-family:Arial,Helvetica,sans-serif; font-size:18px; font-weight:bold; color:#1b2540;">
+              What happens next?
+            </p>
+            {% include "emails/_numbered_steps.html" %}
+          </td>
+        </tr>
+{% endblock %}

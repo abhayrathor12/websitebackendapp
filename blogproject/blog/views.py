@@ -358,6 +358,141 @@ client = razorpay.Client(auth=(
 ))
 
 
+MASTERCLASS_NAME = "Smart Manufacturing & AI Masterclass 2026"
+# Logo on a white tile, embedded inside the email (cid:) so it always shows,
+# also when the mail app blocks outside images, and stays visible in dark mode.
+EMAIL_LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "email_assets", "logo_tile.png")
+EMAIL_LOGO_CID = "technoviz-logo"
+SITE_URL = "https://technovizautomation.com"
+SUPPORT_EMAIL = "support@technovizautomation.com"
+
+
+def attach_inline_logo(message):
+    """Embed the logo so the HTML can show it with src="cid:technoviz-logo"."""
+    from email.mime.image import MIMEImage
+
+    with open(EMAIL_LOGO_PATH, "rb") as f:
+        logo = MIMEImage(f.read(), _subtype="png")
+    logo.add_header("Content-ID", f"<{EMAIL_LOGO_CID}>")
+    logo.add_header("Content-Disposition", "inline", filename="technoviz-logo.png")
+    message.mixed_subtype = "related"  # image belongs to the HTML, not a separate attachment
+    message.attach(logo)
+
+
+def send_masterclass_emails(registration):
+    """Mail 1: welcome to the Technoviz family + registration confirmation
+    (designed HTML, with a plain-text version for clients that block HTML)."""
+    from zoneinfo import ZoneInfo
+
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
+    from django.utils import timezone as dj_timezone
+
+    try:
+        first_name = (registration.name or "").strip().split(" ")[0] or "there"
+        registered_at = dj_timezone.localtime(
+            registration.created_at, ZoneInfo("Asia/Kolkata")
+        ).strftime("%d %b %Y, %I:%M %p (IST)")
+        amount = f"{registration.amount:,.2f}"
+        details = [
+            ("Name", registration.name),
+            ("Email", registration.email),
+            ("Phone", registration.phone),
+            ("Payment ID", registration.payment_id),
+            ("Order ID", registration.order_id),
+            ("Registered on", registered_at),
+        ]
+        steps = [
+            ("Masterclass joining link",
+             "You'll receive a separate email with your masterclass date, time and joining link."),
+            ("Master Portal access",
+             "We'll email your Master Portal login. Watch the welcome video there and take the "
+             "Pre Assessment once your masterclass starts."),
+            ("Your certificate",
+             "After the masterclass, download your certificate from the portal and share it on LinkedIn."),
+        ]
+
+        html = render_to_string("emails/masterclass_welcome.html", {
+            "name": registration.name,
+            "first_name": first_name,
+            "masterclass_name": MASTERCLASS_NAME,
+            "details": details,
+            "amount": amount,
+            "steps": steps,
+            "logo_src": f"cid:{EMAIL_LOGO_CID}",
+            "site_url": SITE_URL,
+            "support_email": SUPPORT_EMAIL,
+            "year": dj_timezone.now().year,
+        })
+
+        text = (
+            f"Hi {registration.name},\n\n"
+            f"Welcome to the Technoviz family! Your payment was successful and your seat for the "
+            f"{MASTERCLASS_NAME} is confirmed.\n\n"
+            f"Registration details:\n"
+            + "".join(f"{label}: {value}\n" for label, value in details)
+            + f"Amount Paid: ₹{amount}\n\n"
+            f"What happens next?\n"
+            + "".join(f"{i}. {title}: {body}\n" for i, (title, body) in enumerate(steps, 1))
+            + f"\nQuestions? Write to us at {SUPPORT_EMAIL}\n\n"
+            f"See you at the masterclass!\n"
+            f"Team Technoviz Automation"
+        )
+
+        message = EmailMultiAlternatives(
+            subject=f"Welcome to the Technoviz Family, {first_name}! Your registration is confirmed 🎉",
+            body=text,
+            from_email=None,
+            to=[registration.email],
+        )
+        message.attach_alternative(html, "text/html")
+        attach_inline_logo(message)
+        message.send(fail_silently=False)
+
+    except BadHeaderError:
+        print("❌ Bad header in masterclass email")
+    except Exception as e:
+        print("❌ Email sending failed:", str(e))
+
+
+def masterclass_after_payment(registration):
+    """Mail 1: confirmation (unchanged). Then mail 2: meeting link of the next
+    webinar and mail 3: Master Portal link (webinar_schedule app)."""
+    from django.db import close_old_connections
+    from webinar_schedule.services import handle_new_registration
+
+    send_masterclass_emails(registration)
+    try:
+        handle_new_registration(registration)
+    except Exception as e:
+        print("❌ Webinar/portal emails failed:", str(e))
+    finally:
+        close_old_connections()
+
+
+class TestRegisterView(APIView):
+    """TESTING ONLY: registers without Razorpay so the emails can be tested.
+    Works only when MASTERCLASS_SKIP_PAYMENT=1 is set in the backend environment;
+    otherwise it returns 404 (production is not affected)."""
+
+    def post(self, request):
+        if not getattr(settings, "MASTERCLASS_SKIP_PAYMENT", False):
+            return Response({"success": False, "message": "Not found"}, status=404)
+
+        import uuid
+        serializer = MasterClassRegistrationSerializer(data=request.data.get("registration_data", {}))
+        if not serializer.is_valid():
+            return Response({"success": False, "errors": serializer.errors}, status=400)
+
+        registration = serializer.save(
+            payment_id=f"TEST-{uuid.uuid4().hex[:12]}",
+            order_id="TEST-NO-PAYMENT",
+            amount=Decimal("0"),
+        )
+        threading.Thread(target=masterclass_after_payment, args=(registration,), daemon=True).start()
+        return Response({"success": True, "message": "Test registration saved (no payment)"})
+
+
 class CreateOrderView(APIView):
 
     def post(self, request):
@@ -406,11 +541,19 @@ class VerifyPaymentView(APIView):
             serializer = MasterClassRegistrationSerializer(data=registration_data)
 
             if serializer.is_valid():
-                serializer.save(
+                registration = serializer.save(
                     payment_id=payment_id,
                     order_id=data.get("razorpay_order_id"),
                     amount=actual_amount_rupees,
                 )
+
+                # ✅ Send email in background (PythonAnywhere safe)
+                threading.Thread(
+                    target=masterclass_after_payment,
+                    args=(registration,),
+                    daemon=True
+                ).start()
+
                 return Response({
                     "success": True,
                     "message": "Payment verified & registration saved"

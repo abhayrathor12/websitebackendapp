@@ -360,6 +360,9 @@
                     <th>Name</th>
                     <th>Email</th>
                     <th>Phone</th>
+                    <th>Company Name</th>
+                    <th>Company Email</th>
+                    <th>Pin Code</th>
                     <th>Payment ID</th>
                     <th>Order ID</th>
                     <th style="text-align: center;">Amount</th>
@@ -376,6 +379,9 @@
                     <td><strong>{{ reg.name }}</strong></td>
                     <td>{{ reg.email }}</td>
                     <td>{{ reg.phone }}</td>
+                    <td>{{ reg.company_name|default:"—" }}</td>
+                    <td>{{ reg.company_email|default:"—" }}</td>
+                    <td>{{ reg.pin_code|default:"—" }}</td>
                     <td><span class="payment-id">{{ reg.payment_id }}</span></td>
                     <td>{{ reg.order_id|default:"—" }}</td>
                     <td style="text-align: center;">₹{{ reg.amount|floatformat:"0" }}</td>
@@ -391,7 +397,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="11" class="empty-state">
+                    <td colspan="14" class="empty-state">
                         <svg viewBox="0 0 64 64" fill="none">
                             <path d="M32 8L8 20V36C8 48 32 56 32 56C32 56 56 48 56 36V20L32 8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M32 32V32.01M32 24V28" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -506,19 +512,19 @@ function downloadCSV() {
     const rowsToExport = selectedRows.length > 0 ? selectedRows : filteredRows;
     if (!rowsToExport.length) { alert("No data to export"); return; }
 
-    let csv = "Name,Email,Phone,Payment ID,Order ID,Amount,Registered On\n";
+    let csv = "Name,Email,Phone,Company Name,Company Email,Pin Code,Payment ID,Order ID,Amount,Registered On\n";
 
     rowsToExport.forEach(row => {
         const cols = row.querySelectorAll("td");
-        if (cols.length < 10) return;
-        const name        = cols[2].innerText.trim();
-        const email       = cols[3].innerText.trim();
-        const phone       = cols[4].innerText.trim();
-        const paymentId   = cols[5].innerText.trim();
-        const orderId     = cols[6].innerText.trim();
-        const amount      = cols[7].innerText.trim();
-        const registeredOn = cols[9].innerText.trim();
-        csv += `"${name}","${email}","${phone}","${paymentId}","${orderId}","${amount}","${registeredOn}"\n`;
+        if (cols.length < 13) return;
+        const text = i => {
+            const v = cols[i].innerText.trim();
+            return v === "—" ? "" : v.replace(/"/g, '""');
+        };
+        // Columns: 0 checkbox, 1 no., 2 name, 3 email, 4 phone, 5 company name, 6 company email,
+        // 7 pin code, 8 payment id, 9 order id, 10 amount, 11 status, 12 registered on, 13 action
+        const values = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12].map(text);
+        csv += values.map(v => `"${v}"`).join(",") + "\n";
     });
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

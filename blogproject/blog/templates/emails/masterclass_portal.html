@@ -1,0 +1,102 @@
+{% extends "emails/masterclass_base.html" %}
+{% comment %}Mail 3: Master Portal access (login details for a new account, or "use your existing password").{% endcomment %}
+
+{% block title %}Your Master Portal Access{% endblock %}
+{% block preview %}Your Master Portal account is ready - log in to take the Pre Assessment and download your certificate.{% endblock %}
+{% block eyebrow %}Master Portal Access{% endblock %}
+{% block hero_title %}Your Master Portal is ready, {{ first_name }}!{% endblock %}
+{% block hero_text %}Take your assessment, see your results and download your certificate - all in one place.{% endblock %}
+{% block signoff %}Happy learning!{% endblock %}
+
+{% block content %}
+        <!-- Intro -->
+        <tr>
+          <td class="px text" style="padding:30px 44px 8px; font-family:Arial,Helvetica,sans-serif; font-size:15px; line-height:24px; color:#3a4560;">
+            <p class="text" style="margin:0 0 14px; color:#3a4560;">Hi {{ name }},</p>
+            <p class="text" style="margin:0; color:#3a4560;">
+              Your Master Portal account for the <strong>{{ masterclass_name }}</strong> is ready.
+              {% if password %}Use the login details below to sign in.{% else %}You already have a portal account, so just sign in with it.{% endif %}
+            </p>
+          </td>
+        </tr>
+
+        <!-- Login details -->
+        <tr>
+          <td class="px" style="padding:22px 44px 8px;">
+            <table role="presentation" class="details" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f6f8fc" style="background-color:#f6f8fc; border:1px solid #e1e7f2; border-radius:12px;">
+              <tr>
+                <td class="accent" style="padding:18px 22px 8px; font-family:Arial,Helvetica,sans-serif; font-size:13px; font-weight:bold; letter-spacing:1.5px; text-transform:uppercase; color:#1f3c7a; border-bottom:2px solid #f4b531;">
+                  Your Login Details
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:10px 22px 18px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif; font-size:14px; line-height:20px;">
+                    <tr>
+                      <td class="detail-label muted row" width="34%" style="padding:9px 0; color:#6b7590; border-bottom:1px solid #e6ebf4;">Login email</td>
+                      <td class="detail-value value row" style="padding:9px 0; color:#1b2540; font-weight:bold; text-align:right; border-bottom:1px solid #e6ebf4; word-break:break-all;">{{ login_email }}</td>
+                    </tr>
+                    <tr>
+                      <td class="detail-label muted" style="padding:12px 0 2px; color:#6b7590;">Password</td>
+                      <td class="detail-value" style="padding:12px 0 2px; text-align:right;">
+                        {% if password %}
+                        <span class="code" style="display:inline-block; padding:6px 12px; background-color:#ffffff; border:1px dashed #9fb0d6; border-radius:6px; font-family:'Courier New',Courier,monospace; font-size:16px; font-weight:bold; letter-spacing:1px; color:#1b2540;">{{ password }}</span>
+                        {% else %}
+                        <span class="value" style="color:#1b2540; font-weight:bold;">Your existing password</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  </table>
+                  <p class="muted" style="margin:12px 0 0; font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:18px; color:#6b7590;">
+                    {% if password %}You can change this password after logging in (Change Password in the menu).
+                    {% else %}Don't remember it? Click <strong>"Forgot password?"</strong> on the login page to reset it.{% endif %}
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Portal button -->
+        <tr>
+          <td class="px" align="center" style="padding:26px 44px 6px;">
+            <table role="presentation" class="btn" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" bgcolor="#1f3c7a" style="border-radius:10px; background-color:#1f3c7a;">
+                  <a href="{{ portal_url }}" target="_blank" style="display:inline-block; padding:15px 38px; font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:bold; color:#ffffff; text-decoration:none; border-radius:10px;">
+                    Open Master Portal &nbsp;&#8594;
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p class="muted" style="margin:14px 0 0; font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:18px; color:#6b7590;">
+              Or open: <a href="{{ portal_url }}" target="_blank" class="accent" style="color:#1f3c7a; word-break:break-all;">{{ portal_url }}</a>
+            </p>
+          </td>
+        </tr>
+
+        <!-- When it opens -->
+        <tr>
+          <td class="px" style="padding:22px 44px 4px;">
+            <table role="presentation" class="note" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#fff8e6" style="background-color:#fff8e6; border-left:4px solid #f4b531; border-radius:8px;">
+              <tr>
+                <td class="note-text" style="padding:14px 18px; font-family:Arial,Helvetica,sans-serif; font-size:14px; line-height:21px; color:#6a5214;">
+                  <strong>&#9203; Assessment opens:</strong>
+                  {% if opens_text %}when your masterclass starts &ndash; <strong>{{ opens_text }}</strong>.
+                  {% else %}when your masterclass starts. We will email you the masterclass date and joining link.{% endif %}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- What you'll do in the portal -->
+        <tr>
+          <td class="px" style="padding:28px 44px 20px;">
+            <p class="heading" style="margin:0 0 16px; font-family:Arial,Helvetica,sans-serif; font-size:18px; font-weight:bold; color:#1b2540;">
+              What you'll do in the portal
+            </p>
+            {% include "emails/_numbered_steps.html" %}
+          </td>
+        </tr>
+{% endblock %}
