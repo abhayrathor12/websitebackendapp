@@ -66,6 +66,8 @@ def sync_zoho_participants(webinar):
     Returns True when Zoho accepted the list."""
     with _zoho_lock:  # two registrations at once must not overwrite each other's list
         webinar.refresh_from_db()
+        if not webinar.meeting_key:
+            return False  # link pasted by hand: there is no Zoho meeting to add people to
         if webinar.date < today_ist():
             return False  # already over, nothing to invite to
         emails = participant_emails(webinar)
@@ -126,7 +128,7 @@ def send_meeting_email(invite, updated=False):
         else f"🔗 Your Masterclass joining link - {webinar.date:%a, %d %b %Y}"
     )
     intro = (
-        "The schedule of your Masterclass session has been updated. Please note the new details below."
+        "The details of your Masterclass session have been updated. Please note the new details below."
         if updated
         else "Here is your joining link for the Masterclass live session."
     )
@@ -138,9 +140,12 @@ def send_meeting_email(invite, updated=False):
         f"{agenda}"
         f"Date & Time: {webinar.when_text}\n\n"
         f"Join the meeting:\n{webinar.join_link}\n\n"
-        f"You will also receive a Zoho Meeting invitation for this session, which adds it "
-        f"to your calendar.\n\n"
-        f"Please join 10 minutes early and keep this email safe. "
+        + (
+            "You will also receive a Zoho Meeting invitation for this session, which adds it "
+            "to your calendar.\n\n"
+            if webinar.meeting_key else ""
+        )
+        + f"Please join 10 minutes early and keep this email safe. "
         f"Do not share the link with others.\n\n"
         f"Regards,\n"
         f"Technoviz Automation"
@@ -154,6 +159,7 @@ def send_meeting_email(invite, updated=False):
         "date_text": f"{webinar.date:%A, %d %B %Y}",
         "time_text": f"{webinar.start_dt:%I:%M %p} - {webinar.end_dt:%I:%M %p} (IST)",
         "join_link": webinar.join_link,
+        "zoho_invite": bool(webinar.meeting_key),
         "steps": [
             ("Join 10 minutes early",
              "Open the link a little before the start time so audio and video are ready."),
@@ -254,7 +260,7 @@ def handle_new_registration(registration):
     )
     # Portal login is created automatically (no registration on the portal)
     _user, password = ensure_portal_account(registration.name, registration.email)
-    if invite.webinar and not invite.zoho_added_at:
+    if invite.webinar and invite.webinar.meeting_key and not invite.zoho_added_at:
         sync_zoho_participants(invite.webinar)
     if invite.webinar and not invite.meeting_email_sent_at:
         send_meeting_email(invite)
@@ -281,7 +287,7 @@ def assign_waiting(webinar):
     for invite in invites:
         invite.webinar = webinar
         invite.save(update_fields=["webinar"])
-    if invites:
+    if invites and webinar.meeting_key:
         sync_zoho_participants(webinar)
     for invite in invites:
         send_meeting_email(invite)
@@ -291,7 +297,7 @@ def assign_waiting(webinar):
 def resend_pending(webinar):
     """Retry what failed for this webinar's registrants: adding them in Zoho and the mails."""
     sent = 0
-    if webinar.invites.filter(zoho_added_at__isnull=True).exists():
+    if webinar.meeting_key and webinar.invites.filter(zoho_added_at__isnull=True).exists():
         sync_zoho_participants(webinar)
     for invite in webinar.invites.select_related("registration", "webinar"):
         if not invite.meeting_email_sent_at and send_meeting_email(invite):

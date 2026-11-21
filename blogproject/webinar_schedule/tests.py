@@ -184,7 +184,7 @@ class PageTests(NoRealZoho, TestCase):
         services.handle_new_registration(make_registration())
         mail.outbox.clear()
         res = self.post(reverse("webinar-schedule-update", args=[w.id]),
-                        self.body(start_time="11:00", notify=True))
+                        self.body(start_time="11:00", notify=True, join_link=w.join_link))
         self.assertEqual(res.status_code, 200, res.content)
         self.assertEqual(res.json()["notified"], 1)
         w.refresh_from_db()
@@ -198,7 +198,7 @@ class PageTests(NoRealZoho, TestCase):
         w = make_webinar(self.day)
         services.handle_new_registration(make_registration())
         mail.outbox.clear()
-        res = self.post(reverse("webinar-schedule-update", args=[w.id]), self.body(topic="New", notify=True))
+        res = self.post(reverse("webinar-schedule-update", args=[w.id]), self.body(topic="New", notify=True, join_link=w.join_link))
         self.assertEqual(res.json()["notified"], 0)
         self.assertEqual(len(mail.outbox), 0)
 
@@ -298,3 +298,77 @@ class ZohoParticipantTests(TestCase):
             with_list = zoho._payload("T", "", datetime(2026, 12, 1, 10, tzinfo=IST), 1000, ["x@y.com"])
         self.assertNotIn("participants", no_list["session"])
         self.assertEqual(with_list["session"]["participants"], [{"email": "x@y.com"}])
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+@mock.patch("webinar_schedule.views.in_background", side_effect=run_now)
+@mock.patch("webinar_schedule.zoho.update_meeting")
+@mock.patch("webinar_schedule.zoho.create_meeting")
+class ManualLinkTests(TestCase):
+    """Free PythonAnywhere cannot reach Zoho Meeting: the admin pastes the link by hand."""
+
+    LINK = "https://meet.zoho.in/abcd-efg-hij"
+
+    def setUp(self):
+        self.client.force_login(User.objects.create_user("admin", "a@x.com", "pw", is_staff=True))
+        self.day = today() + timedelta(days=10)
+
+    def post(self, url, **kw):
+        data = {"date": self.day.isoformat(), "topic": "Masterclass", "agenda": "",
+                "start_time": "10:00", "end_time": "17:30"}
+        data.update(kw)
+        return self.client.post(url, json.dumps(data), content_type="application/json")
+
+    def test_pasted_link_is_saved_without_zoho_and_sent_to_waiting(self, create, update, _bg):
+        services.handle_new_registration(make_registration("w@example.com"))  # paid, no webinar yet
+        mail.outbox.clear()
+        res = self.post(reverse("webinar-schedule-create"), join_link=self.LINK)
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertTrue(res.json()["webinar"]["manual"])
+        create.assert_not_called()
+        update.assert_not_called()
+        w = Webinar.objects.get()
+        self.assertEqual((w.join_link, w.meeting_key), (self.LINK, ""))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(self.LINK, mail.outbox[0].body)
+        self.assertNotIn("Zoho Meeting invitation", mail.outbox[0].body)
+        self.assertNotIn("Zoho Meeting</strong>", mail.outbox[0].alternatives[0][0])
+
+    def test_new_registrant_gets_manual_link_and_is_not_pending(self, create, update, _bg):
+        self.post(reverse("webinar-schedule-create"), join_link=self.LINK)
+        services.handle_new_registration(make_registration("n@example.com"))
+        update.assert_not_called()
+        self.assertIn(self.LINK, mail.outbox[0].body)
+        page = self.client.get(reverse("webinar-schedule"))
+        self.assertEqual(page.context["webinars"][0].not_sent, 0)
+
+    def test_bad_link_rejected(self, create, update, _bg):
+        for link in ("meet.zoho.in/abc", "http://meet.zoho.in/abc", "https://"):
+            self.assertEqual(self.post(reverse("webinar-schedule-create"), join_link=link).status_code, 400, link)
+        self.assertFalse(Webinar.objects.exists())
+
+    def test_edit_link_notifies_and_skips_zoho(self, create, update, _bg):
+        self.post(reverse("webinar-schedule-create"), join_link=self.LINK)
+        w = Webinar.objects.get()
+        services.handle_new_registration(make_registration("e@example.com"))
+        mail.outbox.clear()
+        new = "https://meet.google.com/xyz-abcd-efg"
+        res = self.post(reverse("webinar-schedule-update", args=[w.id]), join_link=new, notify=True)
+        self.assertEqual(res.json()["notified"], 1)
+        update.assert_not_called()
+        self.assertIn(new, mail.outbox[0].body)
+        self.assertIn("Updated", mail.outbox[0].subject)
+
+    def test_edit_needs_link(self, create, update, _bg):
+        self.post(reverse("webinar-schedule-create"), join_link=self.LINK)
+        w = Webinar.objects.get()
+        res = self.post(reverse("webinar-schedule-update", args=[w.id]), join_link="")
+        self.assertEqual(res.status_code, 400)
+
+    def test_replacing_zoho_link_makes_it_manual(self, create, update, _bg):
+        w = make_webinar(self.day)  # created in Zoho (has a meeting key)
+        res = self.post(reverse("webinar-schedule-update", args=[w.id]), join_link=self.LINK)
+        self.assertEqual(res.status_code, 200, res.content)
+        update.assert_not_called()
+        w.refresh_from_db()
+        self.assertEqual((w.join_link, w.meeting_key), (self.LINK, ""))

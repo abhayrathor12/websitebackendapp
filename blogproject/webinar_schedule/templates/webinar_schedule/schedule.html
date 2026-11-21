@@ -132,7 +132,7 @@
 <div class="ws">
     <div class="page-header">
         <h1>Webinar Schedule</h1>
-        <p>Click a date to schedule a Masterclass webinar. A Zoho meeting is created once and its link is saved.
+        <p>Click a date to schedule a Masterclass webinar. Paste your meeting link, or leave it empty to create the Zoho meeting automatically.
            Every new registrant automatically gets the link of the next webinar (registering on the webinar day gives that day's link),
            plus the Master Portal link.</p>
     </div>
@@ -370,12 +370,19 @@ function openForm(values, webinar) {
                 <label>End time (IST)<input type="time" name="end_time" value="${esc(values.end_time)}"></label>
             </div>
             <div class="ws-duration" id="wsDuration"></div>
+            <label>Meeting link${editing ? '' : ' <span class="muted">(optional)</span>'}
+                <input type="url" name="join_link" maxlength="500" placeholder="https://meet.zoho.in/..." value="${esc(values.join_link || '')}">
+            </label>
+            <p class="muted" style="margin:-.35rem 0 .25rem;font-size:.8rem">
+                ${editing ? 'This link is emailed to registrants. If you change it, tick the box below to send the new link.'
+                          : 'Paste the meeting link you created (Zoho Meeting, Google Meet, ...). It is saved and emailed to registrants. Leave it empty to create the Zoho meeting automatically.'}
+            </p>
             ${editing ? `<label class="check"><input type="checkbox" name="notify" ${values.notify === false ? '' : 'checked'}>
-                Email the new date/time to registrants who already got this link (only if the date or time changes)</label>` : ''}
+                Email the new details to registrants who already got the link (only if the date, time or link changes)</label>` : ''}
         </form>`,
         actions: [
             { text: 'Cancel', onClick: closeModal },
-            { text: editing ? 'Save changes' : 'Create meeting', primary: true, onClick: () => reviewForm(webinar) },
+            { text: editing ? 'Save changes' : 'Save', primary: true, onClick: () => reviewForm(webinar) },
         ],
     });
     const form = document.getElementById('wsForm');
@@ -396,16 +403,19 @@ function readForm() {
         agenda: f.agenda.value.trim(),
         start_time: f.start_time.value,
         end_time: f.end_time.value,
+        join_link: f.join_link.value.trim(),
         notify: f.notify ? f.notify.checked : false,
     };
 }
 
-function formProblem(v) {
+function formProblem(v, editing) {
     if (!v.date) return 'Please select the date.';
     if (v.date < TODAY) return 'You cannot schedule a webinar on a past date.';
     if (!v.topic) return 'Please enter the meeting topic.';
     if (!v.start_time || !v.end_time) return 'Please select the start and end time.';
     if (minutes(v.end_time) <= minutes(v.start_time)) return 'The end time must be after the start time.';
+    if (editing && !v.join_link) return 'Please enter the meeting link.';
+    if (v.join_link && !/^https:\/\/\S+\.\S+/i.test(v.join_link)) return 'The meeting link must be a full link starting with https://';
     return null;
 }
 
@@ -413,24 +423,29 @@ function formProblem(v) {
 function reviewForm(webinar) {
     const v = readForm();
     const back = () => openForm(v, webinar);
-    const problem = formProblem(v);
+    const problem = formProblem(v, Boolean(webinar));
     if (problem) return showError('Please check the details', problem, back);
     const editing = Boolean(webinar);
     openModal({
         tone: 'warn', icon: '?',
-        title: editing ? 'Save these changes?' : 'Create the Zoho meeting?',
+        title: editing ? 'Save these changes?' : (v.join_link ? 'Save this webinar?' : 'Create the Zoho meeting?'),
         html: `
-            <p>${editing ? 'The Zoho meeting will be updated with these details.'
-                         : 'A Zoho meeting will be created with these details. The link is created only once and saved.'}</p>
+            <p>${editing ? (webinar.manual || v.join_link !== webinar.join_link
+                              ? 'The webinar will be saved with these details.'
+                              : 'The Zoho meeting will be updated with these details.')
+                         : v.join_link
+                              ? 'The webinar is saved with your meeting link. Registrants get this link by email.'
+                              : 'A Zoho meeting will be created with these details. The link is created only once and saved.'}</p>
             <dl class="ws-summary">
                 <dt>Topic</dt><dd>${esc(v.topic)}</dd>
                 ${v.agenda ? `<dt>Agenda</dt><dd>${esc(v.agenda)}</dd>` : ''}
                 <dt>Date</dt><dd>${esc(niceDate(v.date))}</dd>
                 <dt>Time</dt><dd>${esc(niceTime(v.start_time))} - ${esc(niceTime(v.end_time))} (IST) · ${esc(durationText(v.start_time, v.end_time))}</dd>
+                <dt>Meeting link</dt><dd>${v.join_link ? esc(v.join_link) : 'Created automatically in Zoho'}</dd>
             </dl>`,
         actions: [
             { text: 'Back', onClick: back },
-            { text: editing ? 'Yes, save' : 'Yes, create', primary: true, onClick: () => save(v, webinar) },
+            { text: editing || v.join_link ? 'Yes, save' : 'Yes, create', primary: true, onClick: () => save(v, webinar) },
         ],
     });
 }
@@ -450,7 +465,9 @@ async function post(url, body) {
 
 async function save(v, webinar) {
     const editing = Boolean(webinar);
-    showLoading(editing ? 'Saving changes...' : 'Creating meeting...', 'Talking to Zoho Meeting, please wait.');
+    const viaZoho = editing ? !(webinar.manual || v.join_link !== webinar.join_link) : !v.join_link;
+    showLoading(editing ? 'Saving changes...' : viaZoho ? 'Creating meeting...' : 'Saving...',
+                viaZoho ? 'Talking to Zoho Meeting, please wait.' : 'Please wait.');
     try {
         const data = editing ? await post(`${URLS.base}${webinar.id}/update/`, v) : await post(URLS.create, v);
         const w = data.webinar;
@@ -458,11 +475,11 @@ async function save(v, webinar) {
         if (!editing && data.waiting_sent)
             extra = `<p><strong>${data.waiting_sent}</strong> registrant${data.waiting_sent > 1 ? 's' : ''} who were waiting will get this link by email now.</p>`;
         if (editing && data.notified)
-            extra = `<p>The new date/time is being emailed to <strong>${data.notified}</strong> registrant${data.notified > 1 ? 's' : ''}.</p>`;
+            extra = `<p>The new details are being emailed to <strong>${data.notified}</strong> registrant${data.notified > 1 ? 's' : ''}.</p>`;
         modalLocked = false;
         openModal({
             tone: 'success', icon: '✓',
-            title: editing ? 'Webinar updated' : 'Meeting created',
+            title: editing ? 'Webinar updated' : viaZoho ? 'Meeting created' : 'Webinar saved',
             html: `<p>${esc(w.when)}</p>
                    <dl class="ws-summary"><dt>Join link (sent to registrants)</dt>
                    <dd>${linkRow(w.join_link)}</dd></dl>${extra}`,
@@ -504,7 +521,7 @@ function showWebinar(id) {
             <dl class="ws-summary">
                 <dt>Date & time</dt><dd>${esc(w.when)}</dd>
                 ${w.agenda ? `<dt>Agenda</dt><dd>${esc(w.agenda)}</dd>` : ''}
-                <dt>Join link (for registrants)</dt><dd>${linkRow(w.join_link)}</dd>
+                <dt>Join link (for registrants)${w.manual ? ' - added manually' : ''}</dt><dd>${linkRow(w.join_link)}</dd>
                 ${w.start_link ? `<dt>Start link (host only - do not share)</dt><dd>${linkRow(w.start_link)}</dd>` : ''}
             </dl>
             ${w.is_past ? '<p class="muted" style="margin-top:.75rem">This webinar is over, so it cannot be edited.</p>' : ''}`,

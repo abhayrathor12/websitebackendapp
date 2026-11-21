@@ -2,10 +2,10 @@
 {% comment %}Mail 2: joining link of the live session (also sent as "Updated" when the schedule changes).{% endcomment %}
 
 {% block title %}Your Masterclass Joining Link{% endblock %}
-{% block preview %}{% if updated %}New schedule: {{ date_text }}, {{ time_text }}. Your joining link is inside.{% else %}{{ date_text }}, {{ time_text }} - your joining link for the live session is inside.{% endif %}{% endblock %}
-{% block eyebrow %}{% if updated %}Schedule Updated{% else %}Your Joining Link{% endif %}{% endblock %}
-{% block hero_title %}{% if updated %}Your session has a new schedule{% else %}You're all set, {{ first_name }}!{% endif %}{% endblock %}
-{% block hero_text %}{% if updated %}Please note the updated date and time below. Your joining link stays the same.{% else %}Here is everything you need to join the <strong style="color:#ffffff;">{{ masterclass_name }}</strong> live session.{% endif %}{% endblock %}
+{% block preview %}{% if updated %}Updated details: {{ date_text }}, {{ time_text }}. Your joining link is inside.{% else %}{{ date_text }}, {{ time_text }} - your joining link for the live session is inside.{% endif %}{% endblock %}
+{% block eyebrow %}{% if updated %}Session Updated{% else %}Your Joining Link{% endif %}{% endblock %}
+{% block hero_title %}{% if updated %}Your session details have changed{% else %}You're all set, {{ first_name }}!{% endif %}{% endblock %}
+{% block hero_text %}{% if updated %}Please note the updated details below. Use the joining link in this email.{% else %}Here is everything you need to join the <strong style="color:#ffffff;">{{ masterclass_name }}</strong> live session.{% endif %}{% endblock %}
 
 {% block content %}
         {% if updated %}
@@ -15,7 +15,7 @@
             <table role="presentation" class="note" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#fff8e6" style="background-color:#fff8e6; border-left:4px solid #f4b531; border-radius:8px;">
               <tr>
                 <td class="note-text" style="padding:14px 18px; font-family:Arial,Helvetica,sans-serif; font-size:14px; line-height:21px; color:#6a5214;">
-                  <strong>&#128260; Schedule changed.</strong> The details below replace the ones we sent earlier.
+                  <strong>&#128260; Details changed.</strong> The details below replace the ones we sent earlier.
                 </td>
               </tr>
             </table>
@@ -28,7 +28,7 @@
           <td class="px text" style="padding:26px 44px 8px; font-family:Arial,Helvetica,sans-serif; font-size:15px; line-height:24px; color:#3a4560;">
             <p class="text" style="margin:0 0 14px; color:#3a4560;">Hi {{ name }},</p>
             <p class="text" style="margin:0; color:#3a4560;">
-              {% if updated %}The schedule of your masterclass live session has been updated. Here are the new details.
+              {% if updated %}The details of your masterclass live session have been updated. Here are the new details.
               {% else %}Your live session is scheduled. Save this email - you will need the link below to join.{% endif %}
             </p>
           </td>
@@ -90,7 +90,8 @@
           </td>
         </tr>
 
-        <!-- Calendar note -->
+        {% if zoho_invite %}
+        <!-- Calendar note (only when the meeting was created in Zoho, which sends the invite) -->
         <tr>
           <td class="px" style="padding:22px 44px 4px;">
             <table role="presentation" class="info" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef3fc" style="background-color:#eef3fc; border-left:4px solid #1f3c7a; border-radius:8px;">
@@ -103,6 +104,7 @@
             </table>
           </td>
         </tr>
+        {% endif %}
 
         <!-- Before the session -->
         <tr>
