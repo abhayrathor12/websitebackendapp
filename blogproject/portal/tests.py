@@ -327,7 +327,10 @@ class PortalPhase45ParticipantTests(TestCase):
         progress = self.api.get("/api/portal/progress/").data
         self.assertTrue(progress["all_done"])
         self.assertEqual(progress["certificate"]["name"], "Test Participant")
-        self.assertEqual(progress["certificate"]["certificate_id"], f"TVA-MC26-{self.user.id:05d}")
+        self.assertEqual(progress["certificate"]["certificate_id"], self.profile.certificate_id)
+        self.assertTrue(progress["certificate"]["verify_url"].endswith(
+            f"/verify-certificate?id={self.profile.certificate_id}"))
+        self.assertTrue(set("".join(progress["certificate"]["qr"])) <= {"0", "1"})
         self.profile.certificate_enabled = True
         self.profile.save()
 
@@ -378,6 +381,67 @@ class PortalPhase45ParticipantTests(TestCase):
 
         pdf = build_certificate_pdf("A Very Long Participant Name " * 3, date(2026, 11, 21), "TVA-MC26-00001")
         self.assertTrue(pdf.startswith(b"%PDF"))
+
+    def test_certificate_id_made_at_registration(self):
+        cert_id = self.profile.certificate_id
+        self.assertRegex(cert_id, r"^TVA-MC26-[A-HJKMNP-Z2-9]{6}$")
+        other = PortalProfile.objects.create(
+            user=User.objects.create_user(username="q@x.com", email="q@x.com", password=PASSWORD),
+            full_name="Other",
+        )
+        self.assertNotEqual(other.certificate_id, cert_id)
+        self.profile.full_name = "Renamed"
+        self.profile.save()
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.certificate_id, cert_id)  # never changes
+
+    def test_verify_certificate(self):
+        public = APIClient()  # not logged in
+        url = f"/api/portal/verify-certificate/{self.profile.certificate_id}/"
+
+        res = public.get("/api/portal/verify-certificate/TVA-MC26-ZZZZZZ/")
+        self.assertEqual((res.status_code, res.data["status"]), (404, "not_found"))
+
+        # ID exists but the certificate is not issued yet: no personal details
+        res = public.get(url)
+        self.assertEqual(res.data["status"], "not_issued")
+        self.assertNotIn("name", res.data)
+
+        self.complete_all()
+        self.assertEqual(public.get(url).data["status"], "not_issued")  # admin has not activated
+
+        self.profile.certificate_enabled = True
+        self.profile.save()
+        # lower case + spaces typed by a visitor still match
+        res = public.get(f"/api/portal/verify-certificate/{self.profile.certificate_id.lower()} /")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data["status"], "verified")
+        self.assertEqual(res.data["name"], "Test Participant")
+        self.assertEqual(res.data["course"], "Smart Manufacturing & AI Masterclass 2026")
+        self.assertNotIn("email", res.data)
+
+        # Still verifiable after the user is deactivated (both downloads done)
+        self.user.is_active = False
+        self.user.save()
+        self.assertEqual(public.get(url).data["status"], "verified")
+
+    def test_certificate_date_is_masterclass_date(self):
+        from datetime import date, time
+
+        from webinar_schedule.models import Webinar, WebinarInvite
+        from blog.models import MasterClassRegistration
+
+        self.complete_all()  # (evaluations open only once the masterclass starts)
+        webinar = Webinar.objects.create(
+            date=date(2026, 12, 12), topic="Masterclass", start_time=time(10), end_time=time(17, 30),
+            meeting_key="", join_link="https://example.com/j",
+        )
+        registration = MasterClassRegistration.objects.create(
+            name="Test Participant", email="p@x.com", phone="9999999999", payment_id="pay_cert_1"
+        )
+        WebinarInvite.objects.create(registration=registration, webinar=webinar)
+        progress = self.api.get("/api/portal/progress/").data
+        self.assertEqual(str(progress["certificate"]["completed_on"]), "2026-12-12")
 
 
 # ─── Forgot password (OTP), change password, webinar-time lock ───
@@ -552,3 +616,111 @@ class WebinarLockTests(TestCase):
         self.assertEqual(statuses, ["locked"])
         self.assertIsNone(res.data["evaluations_locked_until"])
         self.assertTrue(res.data["waiting_for_webinar"])
+
+
+# ─── Knowledge Check (Pre-Masterclass Questions) ───
+
+from portal.models import KnowledgeCheck  # noqa: E402
+
+GOOD_ANSWERS = {
+    "role": "Automation",
+    "experience": "8–15 Years",
+    "plc_knowledge": "Intermediate",
+    "industrial_data": "Hands-on Experience",
+    "ai_ml": "Beginner",
+    "genai_tools": "Regularly",
+    "rag_agents": "Basic Understanding",
+    "ai_usecase": "PoC/Experiment",
+    "ai_usecase_details": "Vision inspection of welds",
+    "interests": ["Predictive Maintenance", "Generative AI + RAG"],
+    "problem": "Unplanned downtime on our press line",
+}
+
+
+class KnowledgeCheckTests(TestCase):
+    URL = "/api/portal/knowledge-check/"
+
+    def setUp(self):
+        self.api = APIClient()
+        self.user, _ = ensure_portal_account("Kc User", "kc@example.com")
+        self.api.credentials(HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=self.user).key}")
+
+    def post(self, **changes):
+        answers = {**GOOD_ANSWERS, **changes}
+        return self.api.post(self.URL, {"answers": answers}, format="json")
+
+    def test_questions_are_listed_and_always_open(self):
+        res = self.api.get(self.URL)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.data["questions"]), 10)
+        self.assertIsNone(res.data["answers"])
+
+    def test_submit_once_then_locked(self):
+        res = self.post()
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(res.data["answers"]["role"], "Automation")
+        # multi-choice keeps the order of the listed options
+        self.assertEqual(res.data["answers"]["interests"], ["Generative AI + RAG", "Predictive Maintenance"])
+        res = self.post(role="Quality")
+        self.assertEqual(res.status_code, 409)
+        self.assertIn("cannot be changed", res.data["message"])
+        self.assertEqual(KnowledgeCheck.objects.get(user=self.user).answers["role"], "Automation")
+        # the tab stays open: GET still shows the saved answers
+        self.assertEqual(self.api.get(self.URL).data["answers"]["role"], "Automation")
+
+    def test_validation(self):
+        self.assertEqual(self.post(experience="").status_code, 400)
+        self.assertEqual(self.post(experience="99 Years").status_code, 400)
+        self.assertEqual(self.post(interests=[]).status_code, 400)
+        res = self.post(role="Other", role_other="")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("question 1", res.data["message"].lower())
+        self.assertEqual(self.post(role="Other", role_other="Plant Head").status_code, 200)
+        self.assertFalse(KnowledgeCheck.objects.filter(answers__role="").exists())
+
+    def test_optional_texts_and_hidden_detail_cleared(self):
+        res = self.post(problem="", ai_usecase="No", ai_usecase_details="should be dropped")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data["answers"]["ai_usecase_details"], "")
+        self.assertEqual(res.data["answers"]["problem"], "")
+
+    def test_progress_shows_done_flag(self):
+        self.assertFalse(self.api.get("/api/portal/progress/").data["knowledge_check_done"])
+        self.post()
+        self.assertTrue(self.api.get("/api/portal/progress/").data["knowledge_check_done"])
+
+    def test_needs_participant_login(self):
+        self.api.credentials()
+        self.assertEqual(self.api.get(self.URL).status_code, 401)
+        staff = User.objects.create_user("staffer", "s@x.com", PASSWORD, is_staff=True)
+        self.api.credentials(HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=staff).key}")
+        self.assertEqual(self.api.get(self.URL).status_code, 403)
+
+    def test_admin_csv_export(self):
+        self.post(role="Other", role_other="Plant Head")
+        admin_user = User.objects.create_superuser("boss", "b@x.com", PASSWORD)
+        self.client.force_login(admin_user)
+        res = self.client.post(
+            "/admin/portal/knowledgecheck/",
+            {"action": "export_csv", "_selected_action": [KnowledgeCheck.objects.get().pk]},
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.content.decode("utf-8-sig")
+        self.assertIn("Q1. Your current role/function", body.splitlines()[0])
+        self.assertIn("Plant Head", body)
+        self.assertIn("Generative AI + RAG, Predictive Maintenance", body)
+
+
+    def test_answers_on_portal_users_page_and_export(self):
+        self.post(role="Other", role_other="Plant Head")
+        page_url, export_url = "/portal-users/", "/portal-users/knowledge-check/export/"
+        self.assertEqual(self.client.get(export_url).status_code, 302)  # staff only
+        self.client.force_login(User.objects.create_user("staff2", "st@x.com", PASSWORD, is_staff=True))
+        res = self.client.get(page_url)
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "View answers")
+        self.assertContains(res, "Plant Head")
+        self.assertEqual(res.context["kc_submitted"], 1)
+        csv_body = self.client.get(export_url).content.decode("utf-8-sig")
+        self.assertIn("Plant Head", csv_body)
+        self.assertIn("Q9. Which areas are you most interested in?", csv_body.splitlines()[0])

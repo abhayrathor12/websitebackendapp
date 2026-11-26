@@ -27,8 +27,17 @@ from rest_framework.permissions import AllowAny, BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .certificate import build_certificate_pdf, certificate_id
-from .models import Attempt, Evaluation, PasswordResetOTP, PortalProfile, Question
+from . import knowledge_check
+from .certificate import (
+    COURSE,
+    ORGANISATION,
+    TRAINER,
+    build_certificate_pdf,
+    normalise_certificate_id,
+    qr_matrix,
+    verify_url,
+)
+from .models import Attempt, Evaluation, KnowledgeCheck, PasswordResetOTP, PortalProfile, Question
 from .serializers import AdminQuestionSerializer
 
 User = get_user_model()
@@ -447,9 +456,77 @@ def get_evaluation_for(user, slug):
 
 
 def completion_date(user):
-    """Date of the user's last submitted evaluation (printed on the certificate)."""
+    """Date printed on the certificate: the day of the user's masterclass. Falls back to
+    the date of their last submitted evaluation when no masterclass is assigned."""
+    invite = masterclass_invite(user)
+    if invite is not None:
+        return invite.webinar.date
     last_attempt = Attempt.objects.filter(user=user).order_by("-submitted_at").first()
-    return timezone.localtime(last_attempt.submitted_at) if last_attempt else timezone.now()
+    return timezone.localtime(last_attempt.submitted_at if last_attempt else timezone.now()).date()
+
+
+def certificate_issued(profile):
+    """The certificate counts as issued once all evaluations are done and the admin activated it."""
+    return profile.certificate_enabled and all_evaluations_done(profile.user)
+
+
+class KnowledgeCheckView(ParticipantAPIView):
+    """Pre-Masterclass Questions. The tab is always open: GET shows the questions
+    (and the answers once submitted). POST submits them - only once, the answers
+    cannot be changed afterwards."""
+
+    def payload(self, user):
+        check = KnowledgeCheck.objects.filter(user=user).first()
+        return {
+            "questions": knowledge_check.QUESTIONS,
+            "answers": check.answers if check else None,
+            "submitted_at": check.submitted_at if check else None,
+            "updated_at": check.updated_at if check else None,
+            "masterclass_when": masterclass_when(user),
+        }
+
+    def get(self, request):
+        return Response(self.payload(request.user))
+
+    def post(self, request):
+        answers, error = knowledge_check.clean_answers(request.data.get("answers"))
+        if error:
+            return Response({"message": error}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            with transaction.atomic():
+                _check, created = KnowledgeCheck.objects.get_or_create(
+                    user=request.user, defaults={"answers": answers}
+                )
+        except IntegrityError:  # submitted at the same moment in another tab
+            created = False
+        if not created:
+            return Response(
+                {"message": "You have already submitted your answers. They cannot be changed."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(self.payload(request.user))
+
+
+def masterclass_invite(user):
+    """The user's latest masterclass assignment (WebinarInvite with a webinar), or None."""
+    from webinar_schedule.models import WebinarInvite
+
+    if not user.email:
+        return None
+    return (
+        WebinarInvite.objects.filter(registration__email__iexact=user.email, webinar__isnull=False)
+        .select_related("webinar")
+        .order_by("-registration__created_at")
+        .first()
+    )
+
+
+def masterclass_when(user):
+    """e.g. 'Sat, 12 Dec 2026 at 10:00 AM IST' for the user's masterclass, or None."""
+    invite = masterclass_invite(user)
+    if invite is None:
+        return None
+    return f"{invite.webinar.start_dt:%a, %d %b %Y} at {invite.webinar.start_dt:%I:%M %p} IST"
 
 
 class ProgressView(ParticipantAPIView):
@@ -468,14 +545,18 @@ class ProgressView(ParticipantAPIView):
                 "waiting_for_webinar": waiting,
                 "schedule_message": schedule_locked_message(schedule) if waiting else None,
                 "all_done": all_done,
+                "knowledge_check_done": KnowledgeCheck.objects.filter(user=user).exists(),
                 "certificate_enabled": profile.certificate_enabled,
                 "certificate_downloaded": profile.certificate_downloaded,
                 "linkedin_downloaded": profile.linkedin_downloaded,
                 # Details for the on-screen certificate preview
                 "certificate": {
                     "name": profile.full_name,
-                    "completed_on": completion_date(user).date(),
-                    "certificate_id": certificate_id(user.id),
+                    "completed_on": completion_date(user),
+                    "certificate_id": profile.certificate_id,
+                    "verify_url": verify_url(profile.certificate_id),
+                    # QR code rows ("1" = dark), drawn by the on-screen preview
+                    "qr": qr_matrix(verify_url(profile.certificate_id)),
                 }
                 if all_done
                 else None,
@@ -624,7 +705,7 @@ class CertificateDownloadView(ParticipantAPIView):
             return blocked
 
         profile = user.portal_profile
-        pdf = build_certificate_pdf(profile.full_name, completion_date(user), certificate_id(user.id))
+        pdf = build_certificate_pdf(profile.full_name, completion_date(user), profile.certificate_id)
 
         record_download(profile, "certificate_downloaded")
 
@@ -652,6 +733,48 @@ class LinkedInGuideDownloadView(ParticipantAPIView):
             as_attachment=True,
             filename="How-to-Share-on-LinkedIn.pdf",
             content_type="application/pdf",
+        )
+
+
+# ─── Public: certificate verification (website /verify-certificate) ───
+
+
+class VerifyCertificateView(PublicAPIView):
+    """GET /api/portal/verify-certificate/<id>/ - anyone can check a certificate ID.
+    Returns only public details (no email/phone/answers)."""
+
+    def get(self, request, cert_id):
+        cert_id = normalise_certificate_id(cert_id)
+        profile = (
+            PortalProfile.objects.select_related("user").filter(certificate_id=cert_id).first()
+            if cert_id
+            else None
+        )
+        if profile is None:
+            return Response(
+                {"status": "not_found", "message": "No certificate was found with this ID."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if not certificate_issued(profile):
+            # The ID exists (made at registration) but the certificate is not issued yet
+            return Response(
+                {
+                    "status": "not_issued",
+                    "certificate_id": profile.certificate_id,
+                    "message": "This certificate has not been issued yet.",
+                }
+            )
+        return Response(
+            {
+                "status": "verified",
+                "certificate_id": profile.certificate_id,
+                "name": profile.full_name,
+                "course": COURSE,
+                "format": "Full-Day Masterclass",
+                "completed_on": completion_date(profile.user),
+                "issued_by": ORGANISATION,
+                "trainer": TRAINER,
+            }
         )
 
 
@@ -728,15 +851,24 @@ class AdminQuestionDetailView(PortalAdminAPIView):
 @staff_member_required
 def portal_users(request):
     total_evaluations = Evaluation.objects.count()
-    profiles = (
-        PortalProfile.objects.select_related("user")
+    profiles = list(
+        PortalProfile.objects.select_related("user", "user__knowledge_check")
         .annotate(completed=Count("user__portal_attempts", distinct=True))
         .order_by("-created_at")
     )
+    # Knowledge Check answers, shown in a popup per user ("View answers")
+    for p in profiles:
+        check = getattr(p.user, "knowledge_check", None)
+        p.kc_submitted_at = check.submitted_at if check else None
+        p.kc_answers = knowledge_check.answer_rows(check) if check else []
     return render(
         request,
         "portal/portal_users.html",
-        {"profiles": profiles, "total_evaluations": total_evaluations},
+        {
+            "profiles": profiles,
+            "total_evaluations": total_evaluations,
+            "kc_submitted": sum(1 for p in profiles if p.kc_submitted_at),
+        },
     )
 
 
@@ -777,3 +909,12 @@ def toggle_portal_user(request, pk):
         deactivate_user(user)
 
     return JsonResponse({"success": True, "active": user.is_active})
+
+
+# ─── Knowledge Check answers: CSV download (button on Master Portal Users) ───
+
+
+@staff_member_required
+def knowledge_check_export(request):
+    checks = KnowledgeCheck.objects.select_related("user", "user__portal_profile").order_by("-submitted_at")
+    return knowledge_check.csv_response(checks)

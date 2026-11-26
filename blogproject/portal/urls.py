@@ -15,6 +15,7 @@ urlpatterns = [
     path("reset-password/", views.ResetPasswordView.as_view(), name="portal-reset-password"),
     # Participant
     path("progress/", views.ProgressView.as_view(), name="portal-progress"),
+    path("knowledge-check/", views.KnowledgeCheckView.as_view(), name="portal-knowledge-check"),
     path("evaluations/<slug:slug>/", views.EvaluationView.as_view(), name="portal-evaluation"),
     path(
         "evaluations/<slug:slug>/submit/",
@@ -23,6 +24,11 @@ urlpatterns = [
     ),
     path("certificate/", views.CertificateDownloadView.as_view(), name="portal-certificate"),
     path("linkedin-guide/", views.LinkedInGuideDownloadView.as_view(), name="portal-linkedin-guide"),
+    path(
+        "verify-certificate/<str:cert_id>/",
+        views.VerifyCertificateView.as_view(),
+        name="portal-verify-certificate",
+    ),
     # Admin: question manager
     path(
         "admin/evaluations/<slug:slug>/questions/",

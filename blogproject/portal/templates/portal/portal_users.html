@@ -124,6 +124,42 @@
     .pu-btn-ok.deactivate, .pu-btn-ok.error { background: #ef4444; color: white; }
     .pu-btn-ok:disabled { opacity: 0.6; cursor: wait; }
 
+    /* Knowledge Check answers */
+    .portal-users .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .portal-users .csv-btn {
+        display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.7rem 1.1rem; border-radius: 0.5rem;
+        background: #2563eb; color: white; font-weight: 600; font-size: 0.9rem; text-decoration: none;
+    }
+    .portal-users .csv-btn:hover { background: #1d4ed8; }
+    .portal-users .kc-btn {
+        padding: 0.45rem 0.85rem; border-radius: 0.5rem; border: 1px solid #bfdbfe; cursor: pointer;
+        background: #eff6ff; color: #1d4ed8; font-size: 0.8rem; font-weight: 600;
+    }
+    .portal-users .kc-btn:hover { background: #dbeafe; }
+    .kc-modal-card {
+        width: 100%; max-width: 720px; max-height: calc(100vh - 32px); display: flex; flex-direction: column;
+        border-radius: 1rem; background: white; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        animation: pu-pop 0.18s ease-out;
+    }
+    .kc-modal-head {
+        display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+        padding: 1.25rem 1.5rem; border-bottom: 1px solid #e5e7eb;
+    }
+    .kc-modal-head h3 { margin: 0 0 0.2rem; font-size: 1.15rem; color: #111827; }
+    .kc-modal-head p { margin: 0; font-size: 0.85rem; color: #6b7280; }
+    .kc-close {
+        border: none; background: #f3f4f6; color: #374151; width: 34px; height: 34px; flex-shrink: 0;
+        border-radius: 50%; font-size: 1.2rem; line-height: 1; cursor: pointer;
+    }
+    .kc-close:hover { background: #e5e7eb; }
+    .kc-modal-body { overflow-y: auto; padding: 1rem 1.5rem 1.5rem; }
+    .kc-modal-body dl { margin: 0; }
+    .kc-modal-body .kc-item { padding: 0.75rem 0; border-bottom: 1px solid #f3f4f6; }
+    .kc-modal-body .kc-item:last-child { border-bottom: none; }
+    .kc-modal-body dt { color: #6b7280; font-size: 0.82rem; margin-bottom: 0.25rem; line-height: 1.4; }
+    .kc-modal-body dd { margin: 0; color: #111827; font-weight: 600; font-size: 0.92rem; line-height: 1.45; white-space: pre-line; }
+
     @media (max-width: 768px) {
         .portal-users { padding: 1rem; }
         .portal-users .search-box { max-width: 100%; }
@@ -132,12 +168,21 @@
 </style>
 
 <div class="portal-users">
-    <div class="page-header">
-        <h1>Master Portal Users</h1>
-        <p>Portal accounts are created automatically when someone pays for the Masterclass, and their login is emailed to them. Accounts are active straight away — use Deactivate / Activate to block or allow access.</p>
-        <div class="stats-row">
-            <div class="stat-item">Total Users: <strong>{{ profiles|length }}</strong></div>
+    <div class="page-header header-row">
+        <div>
+            <h1>Master Portal Users</h1>
+            <p>Portal accounts are created automatically when someone pays for the Masterclass, and their login is emailed to them. Accounts are active straight away — use Deactivate / Activate to block or allow access.</p>
+            <div class="stats-row">
+                <div class="stat-item">Total Users: <strong>{{ profiles|length }}</strong></div>
+                <div class="stat-item">Knowledge Check submitted: <strong>{{ kc_submitted }}</strong></div>
+            </div>
         </div>
+        {% if kc_submitted %}
+        <a class="csv-btn" href="{% url 'knowledge-check-export' %}">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            Download Knowledge Check (CSV)
+        </a>
+        {% endif %}
     </div>
 
     <div class="search-box">
@@ -156,6 +201,7 @@
                     <th>Name</th>
                     <th>Email</th>
                     <th>Registered On</th>
+                    <th class="center">Knowledge Check</th>
                     <th class="center">Evaluations</th>
                     <th class="center">Certificate</th>
                     <th class="center">LinkedIn PDF</th>
@@ -171,6 +217,20 @@
                     <td><strong>{{ p.full_name }}</strong></td>
                     <td>{{ p.user.email }}</td>
                     <td>{{ p.created_at|date:"M d, Y H:i" }}</td>
+                    <td class="center">
+                        {% if p.kc_submitted_at %}
+                        <button type="button" class="kc-btn" data-name="{{ p.full_name }}"
+                                data-when="{{ p.kc_submitted_at|date:'M d, Y H:i' }}"
+                                onclick="showAnswers(this, 'kc-{{ p.id }}')">View answers</button>
+                        <template id="kc-{{ p.id }}">
+                            <dl>
+                                {% for question, answer in p.kc_answers %}
+                                <div class="kc-item"><dt>{{ question }}</dt><dd>{{ answer }}</dd></div>
+                                {% endfor %}
+                            </dl>
+                        </template>
+                        {% else %}<span class="badge badge-no">Not submitted</span>{% endif %}
+                    </td>
                     <td class="center">{{ p.completed }} / {{ total_evaluations }}</td>
                     <td class="center">
                         {% if p.certificate_downloaded %}<span class="badge badge-yes">Downloaded</span>
@@ -204,7 +264,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="10" class="empty-state">
+                    <td colspan="11" class="empty-state">
                         <div style="font-size: 1.1rem; margin-bottom: 0.5rem;">No portal users yet</div>
                         <div style="font-size: 0.9rem;">Participants appear here after they pay for the Masterclass</div>
                     </td>
@@ -227,7 +287,38 @@
     </div>
 </div>
 
+<div class="pu-modal" id="kcModal" role="dialog" aria-modal="true" aria-labelledby="kcTitle">
+    <div class="kc-modal-card">
+        <div class="kc-modal-head">
+            <div>
+                <h3 id="kcTitle"></h3>
+                <p id="kcWhen"></p>
+            </div>
+            <button type="button" class="kc-close" onclick="closeAnswers()" aria-label="Close">&times;</button>
+        </div>
+        <div class="kc-modal-body" id="kcBody"></div>
+    </div>
+</div>
+
 <script>
+const kcModal = document.getElementById('kcModal');
+
+function showAnswers(btn, templateId) {
+    document.getElementById('kcTitle').textContent = `Knowledge Check — ${btn.dataset.name}`;
+    document.getElementById('kcWhen').textContent = `Submitted on ${btn.dataset.when}`;
+    const body = document.getElementById('kcBody');
+    body.replaceChildren(document.getElementById(templateId).content.cloneNode(true));
+    body.scrollTop = 0;
+    kcModal.classList.add('is-open');
+}
+
+function closeAnswers() {
+    kcModal.classList.remove('is-open');
+}
+
+kcModal.addEventListener('click', e => { if (e.target === kcModal) closeAnswers(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAnswers(); });
+
 function filterTable() {
     const q = document.getElementById('searchInput').value.toLowerCase();
     document.querySelectorAll('#tableBody tr').forEach(row => {
