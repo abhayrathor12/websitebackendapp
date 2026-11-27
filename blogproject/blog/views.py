@@ -1,3 +1,5 @@
+import threading
+
 from django.shortcuts import render
 from django.core.mail import send_mail,BadHeaderError
 from rest_framework import viewsets
@@ -29,53 +31,56 @@ class BlogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = BlogSerializer
     lookup_field = 'slug'
 
+def send_contact_emails(contact):
+    """Thank-you mail to the visitor + notification to the team. Runs in a background
+    thread so the contact form gets its response straight away."""
+    try:
+        send_mail(
+            subject="Thanks for contacting Technoviz Automation",
+            message=(
+                f"Hello {contact.name},\n\n"
+                f"Thank you for reaching out to us! "
+                f"We have received your message and will get back to you soon.\n\n"
+                f"Your Message: {contact.message}\n\n"
+                "Best regards,\nTechnoviz Automation"
+            ),
+            from_email=None,  # uses DEFAULT_FROM_EMAIL
+            recipient_list=[contact.email],
+            fail_silently=False,
+        )
+        send_mail(
+            subject=f"📩 New Contact Form Submission from {contact.name}",
+            message=(
+                f"A new contact form has been submitted.\n\n"
+                f"Name: {contact.name}\n"
+                f"Email: {contact.email}\n"
+                f"Company: {contact.company or 'N/A'}\n"
+                f"Phone: {contact.phone or 'N/A'}\n"
+                f"Timeline: {contact.timeline or 'N/A'}\n\n"
+                f"Message:\n{contact.message}\n\n"
+                f"Submitted at: {contact.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+            ),
+            from_email=None,  # uses DEFAULT_FROM_EMAIL
+            recipient_list=["rathorabhay633@gmail.com"],
+            fail_silently=False,
+        )
+    except BadHeaderError:
+        print("❌ Bad header found while sending contact email")
+    except Exception as e:
+        print("❌ Error sending contact mail:", str(e))
+
+
 class ContactCreateView(APIView):
     def post(self, request):
         serializer = ContactSerializer(data=request.data)
         if serializer.is_valid():
             contact = serializer.save()
 
-            print("📩 Preparing to send mail to:", contact.email)
-
-            try:
-                send_mail(
-                    subject="Thanks for contacting Technoviz Automation",
-                    message=(
-                        f"Hello {contact.name},\n\n"
-                        f"Thank you for reaching out to us! "
-                        f"We have received your message and will get back to you soon.\n\n"
-                        f"Your Message: {contact.message}\n\n"
-                        "Best regards,\nTechnoviz Automation"
-                    ),
-                    from_email=None,  # uses DEFAULT_FROM_EMAIL
-                    recipient_list=[contact.email],
-                    fail_silently=False,
-                )
-                send_mail(
-                    subject=f"📩 New Contact Form Submission from {contact.name}",
-                    message=(
-                        f"A new contact form has been submitted.\n\n"
-                        f"Name: {contact.name}\n"
-                        f"Email: {contact.email}\n"
-                        f"Company: {contact.company or 'N/A'}\n"
-                        f"Phone: {contact.phone or 'N/A'}\n"
-                        f"Timeline: {contact.timeline or 'N/A'}\n\n"
-                        f"Message:\n{contact.message}\n\n"
-                        f"Submitted at: {contact.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
-                    ),
-                    from_email=None,  # uses DEFAULT_FROM_EMAIL
-                    recipient_list=["rathorabhay633@gmail.com"],  # <-- your email here
-                    fail_silently=False,
-                )
-
-            except BadHeaderError:
-                print("❌ Bad header found while sending email")
-            except Exception as e:
-                print("❌ Error sending mail:", str(e))
+            # Emails go out in the background; the website gets its answer right away
+            threading.Thread(target=send_contact_emails, args=(contact,), daemon=True).start()
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-       
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ContactViewSet(viewsets.ModelViewSet):
@@ -145,6 +150,24 @@ def edit_blog(request, blog_id):
 def contact_list(request):
     contacts = Contact.objects.all().order_by("-id")  # latest first
     return render(request, "contact_list.html", {"contacts": contacts})
+
+
+@staff_member_required
+def delete_contact(request, pk):
+    """Delete one contact form submission (POST only, from the View Contacts page)."""
+    if request.method == "POST":
+        Contact.objects.filter(pk=pk).delete()
+    return redirect("contact_list")
+
+
+@staff_member_required
+def delete_multiple_contacts(request):
+    """Delete the ticked contact submissions (POST only, from the View Contacts page)."""
+    if request.method == "POST":
+        ids = [i for i in request.POST.getlist("ids") if i.isdigit()]
+        if ids:
+            Contact.objects.filter(pk__in=ids).delete()
+    return redirect("contact_list")
 
 @staff_member_required
 def blog_list(request):

@@ -23,9 +23,56 @@
         font-size: 0.95rem;
     }
 
-    .search-box {
+    .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
         margin-bottom: 0.5rem;
+    }
+
+    .search-box {
         position: relative;
+        flex: 1;
+        max-width: 400px;
+        min-width: 220px;
+    }
+
+    .btn-delete-selected {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1.1rem;
+        border: none;
+        border-radius: 0.5rem;
+        background: #ef4444;
+        color: white;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-delete-selected:hover:not(:disabled) {
+        background: #dc2626;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-delete-selected:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+    .check-cell {
+        width: 44px;
+    }
+
+    .check-cell input {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: #3b82f6;
     }
 
     .search-input {
@@ -170,6 +217,141 @@
         color: #1e40af;
     }
 
+    .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 0.375rem;
+        border: 1px solid #e5e7eb;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #6b7280;
+    }
+
+    .icon-btn.delete-btn:hover {
+        background: #fee2e2;
+        border-color: #fecaca;
+        color: #dc2626;
+    }
+
+    .icon-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Delete confirmation popup */
+    .confirm-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        background: rgba(17, 24, 39, 0.55);
+    }
+
+    .confirm-overlay.open {
+        display: flex;
+        animation: confirmFade 0.15s ease-out;
+    }
+
+    .confirm-box {
+        width: 100%;
+        max-width: 420px;
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.75rem 1.5rem 1.5rem;
+        text-align: center;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+        animation: confirmPop 0.18s ease-out;
+    }
+
+    .confirm-icon {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 1rem;
+        border-radius: 9999px;
+        background: #fee2e2;
+        color: #dc2626;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .confirm-icon svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    .confirm-box h3 {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 0.5rem;
+    }
+
+    .confirm-box p {
+        color: #4b5563;
+        font-size: 0.92rem;
+        line-height: 1.5;
+        margin: 0;
+        word-break: break-word;
+    }
+
+    .confirm-box .confirm-note {
+        margin-top: 0.4rem;
+        font-size: 0.82rem;
+        color: #9ca3af;
+    }
+
+    .confirm-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+
+    .confirm-actions button {
+        flex: 1;
+        padding: 0.7rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-cancel {
+        border: 1px solid #e5e7eb;
+        background: white;
+        color: #374151;
+    }
+
+    .btn-cancel:hover {
+        background: #f9fafb;
+    }
+
+    .btn-confirm-delete {
+        border: none;
+        background: #ef4444;
+        color: white;
+    }
+
+    .btn-confirm-delete:hover {
+        background: #dc2626;
+    }
+
+    .btn-confirm-delete:disabled {
+        opacity: 0.6;
+        cursor: wait;
+    }
+
+    @keyframes confirmFade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes confirmPop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
     @media (max-width: 768px) {
         .contact-submissions {
             padding: 1rem;
@@ -195,6 +377,12 @@
         <p>Manage and review all contact form submissions</p>
     </div>
 
+    <form id="bulkDeleteForm" method="POST" action="{% url 'delete_multiple_contacts' %}"
+          onsubmit="return askBulkDelete(event);">
+        {% csrf_token %}
+    </form>
+
+    <div class="toolbar">
     <div class="search-box">
         <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -207,22 +395,37 @@
             onkeyup="filterTable()"
         >
     </div>
+        <button type="submit" form="bulkDeleteForm" class="btn-delete-selected" id="bulkDeleteBtn" disabled>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                <path d="M2.5 5H4.16667M4.16667 5H17.5M4.16667 5V16.6667C4.16667 17.1087 4.34226 17.5326 4.65482 17.8452C4.96738 18.1577 5.39131 18.3333 5.83333 18.3333H14.1667C14.6087 18.3333 15.0326 18.1577 15.3452 17.8452C15.6577 17.5326 15.8333 17.1087 15.8333 16.6667V5H4.16667ZM6.66667 5V3.33333C6.66667 2.89131 6.84226 2.46738 7.15482 2.15482C7.46738 1.84226 7.89131 1.66667 8.33333 1.66667H11.6667C12.1087 1.66667 12.5326 1.84226 12.8452 2.15482C13.1577 2.46738 13.3333 2.89131 13.3333 3.33333V5M8.33333 9.16667V14.1667M11.6667 9.16667V14.1667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span id="bulkDeleteText">Delete Selected</span>
+        </button>
+    </div>
 
     <div class="table-container">
         <table class="submissions-table" id="submissionsTable">
             <thead>
                 <tr>
+                    <th class="check-cell">
+                        <input type="checkbox" id="selectAll" title="Select all" aria-label="Select all" onclick="toggleSelectAll(this)">
+                    </th>
                     <th>Name</th>
                     <th>Email</th>
                     <th>Company</th>
                     <th>Phone</th>
                     <th>Timeline</th>
                     <th>Message</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
                 {% for c in contacts %}
                 <tr>
+                    <td class="check-cell">
+                        <input type="checkbox" class="row-checkbox" name="ids" value="{{ c.id }}" form="bulkDeleteForm"
+                               aria-label="Select {{ c.name }}" onchange="updateSelected()">
+                    </td>
                     <td><strong>{{ c.name }}</strong></td>
                     <td>{{ c.email }}</td>
                     <td>{{ c.company|default:"—" }}</td>
@@ -235,10 +438,21 @@
                         {% endif %}
                     </td>
                     <td class="message-cell" title="{{ c.message }}">{{ c.message|default:"—" }}</td>
+                    <td>
+                        <form method="POST" action="{% url 'delete_contact' c.id %}" style="margin:0"
+                              data-name="{{ c.name }}" onsubmit="return askSingleDelete(event, this);">
+                            {% csrf_token %}
+                            <button type="submit" class="icon-btn delete-btn" title="Delete" aria-label="Delete">
+                                <svg viewBox="0 0 20 20" fill="none">
+                                    <path d="M2.5 5H4.16667M4.16667 5H17.5M4.16667 5V16.6667C4.16667 17.1087 4.34226 17.5326 4.65482 17.8452C4.96738 18.1577 5.39131 18.3333 5.83333 18.3333H14.1667C14.6087 18.3333 15.0326 18.1577 15.3452 17.8452C15.6577 17.5326 15.8333 17.1087 15.8333 16.6667V5H4.16667ZM6.66667 5V3.33333C6.66667 2.89131 6.84226 2.46738 7.15482 2.15482C7.46738 1.84226 7.89131 1.66667 8.33333 1.66667H11.6667C12.1087 1.66667 12.5326 1.84226 12.8452 2.15482C13.1577 2.46738 13.3333 2.89131 13.3333 3.33333V5M8.33333 9.16667V14.1667M11.6667 9.16667V14.1667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </form>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="empty-state">
+                    <td colspan="8" class="empty-state">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
                         </svg>
@@ -259,6 +473,25 @@
         <button class="pagination-btn" onclick="changePage(1)" id="nextBtn">
             Next
         </button>
+    </div>
+</div>
+
+<!-- Delete confirmation popup -->
+<div class="confirm-overlay" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"
+     onclick="if (event.target === this) closeConfirm()">
+    <div class="confirm-box">
+        <div class="confirm-icon">
+            <svg viewBox="0 0 20 20" fill="none">
+                <path d="M2.5 5H4.16667M4.16667 5H17.5M4.16667 5V16.6667C4.16667 17.1087 4.34226 17.5326 4.65482 17.8452C4.96738 18.1577 5.39131 18.3333 5.83333 18.3333H14.1667C14.6087 18.3333 15.0326 18.1577 15.3452 17.8452C15.6577 17.5326 15.8333 17.1087 15.8333 16.6667V5H4.16667ZM6.66667 5V3.33333C6.66667 2.89131 6.84226 2.46738 7.15482 2.15482C7.46738 1.84226 7.89131 1.66667 8.33333 1.66667H11.6667C12.1087 1.66667 12.5326 1.84226 12.8452 2.15482C13.1577 2.46738 13.3333 2.89131 13.3333 3.33333V5M8.33333 9.16667V14.1667M11.6667 9.16667V14.1667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <h3 id="confirmTitle">Delete contact?</h3>
+        <p id="confirmText"></p>
+        <p class="confirm-note">This cannot be undone.</p>
+        <div class="confirm-actions">
+            <button type="button" class="btn-cancel" onclick="closeConfirm()">Cancel</button>
+            <button type="button" class="btn-confirm-delete" id="confirmDeleteBtn" onclick="runConfirmedDelete()">Delete</button>
+        </div>
     </div>
 </div>
 
@@ -325,10 +558,10 @@
             // Skip empty state row
             if (row.cells.length === 1) return false;
             
-            const name = row.cells[0].textContent.toLowerCase();
-            const email = row.cells[1].textContent.toLowerCase();
-            const company = row.cells[2].textContent.toLowerCase();
-            const phone = row.cells[3].textContent.toLowerCase();
+            const name = row.cells[1].textContent.toLowerCase();
+            const email = row.cells[2].textContent.toLowerCase();
+            const company = row.cells[3].textContent.toLowerCase();
+            const phone = row.cells[4].textContent.toLowerCase();
             
             return name.includes(input) || 
                    email.includes(input) || 
@@ -336,9 +569,90 @@
                    phone.includes(input);
         });
         
+        // Untick contacts the search now hides, so only visible matches can be deleted
+        allRows.forEach(row => {
+            const cb = row.querySelector('.row-checkbox');
+            if (cb && !filteredRows.includes(row)) cb.checked = false;
+        });
+
         currentPage = 1;
         showPage(1);
+        updateSelected();
     }
+
+    // ── Select all / delete selected ──
+    // "Select all" ticks every contact that matches the current search (on all pages).
+    function toggleSelectAll(source) {
+        allRows.forEach(row => {
+            const cb = row.querySelector('.row-checkbox');
+            if (cb) cb.checked = source.checked && filteredRows.includes(row);
+        });
+        updateSelected();
+    }
+
+    function selectedBoxes() {
+        return Array.from(document.querySelectorAll('.row-checkbox:checked'));
+    }
+
+    function updateSelected() {
+        const count = selectedBoxes().length;
+        const matching = filteredRows.filter(row => row.querySelector('.row-checkbox')).length;
+        document.getElementById('bulkDeleteBtn').disabled = count === 0;
+        document.getElementById('bulkDeleteText').textContent =
+            count ? `Delete Selected (${count})` : 'Delete Selected';
+        const selectAll = document.getElementById('selectAll');
+        selectAll.checked = matching > 0 && count === matching;
+        selectAll.indeterminate = count > 0 && count < matching;
+    }
+
+    // ── Delete confirmation popup ──
+    let pendingForm = null;
+
+    function openConfirm(form, title, text) {
+        pendingForm = form;
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmText').textContent = text;
+        const btn = document.getElementById('confirmDeleteBtn');
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+        document.getElementById('confirmModal').classList.add('open');
+        document.querySelector('#confirmModal .btn-cancel').focus();
+    }
+
+    function closeConfirm() {
+        pendingForm = null;
+        document.getElementById('confirmModal').classList.remove('open');
+    }
+
+    function runConfirmedDelete() {
+        if (!pendingForm) return;
+        const btn = document.getElementById('confirmDeleteBtn');
+        btn.disabled = true;            // one click only
+        btn.textContent = 'Deleting...';
+        pendingForm.submit();           // submit() skips onsubmit, so no second popup
+    }
+
+    function askSingleDelete(event, form) {
+        event.preventDefault();
+        openConfirm(form, 'Delete contact?', `Delete the contact from "${form.dataset.name}"?`);
+        return false;
+    }
+
+    function askBulkDelete(event) {
+        event.preventDefault();
+        const count = selectedBoxes().length;
+        if (!count) return false;
+        openConfirm(
+            document.getElementById('bulkDeleteForm'),
+            count === 1 ? 'Delete contact?' : `Delete ${count} contacts?`,
+            `Delete ${count} selected contact${count === 1 ? '' : 's'}?`
+        );
+        return false;
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.getElementById('confirmModal').classList.contains('open')) closeConfirm();
+    });
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', initPagination);
