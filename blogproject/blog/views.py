@@ -519,7 +519,7 @@ class TestRegisterView(APIView):
 class CreateOrderView(APIView):
 
     def post(self, request):
-        amount = 584982  # in paise
+        amount = 589900  # in paise
 
         order = client.order.create({
             "amount": amount,
